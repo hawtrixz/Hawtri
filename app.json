@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Hawtrix",
+    "slug": "hawtrix",
+    "version": "2.86.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "hawtrix",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A1628"
+    },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.hawtrix.app",
+      "versionCode": 28600,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0A1628"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png",
+      "name": "Hawtrix",
+      "shortName": "Hawtrix",
+      "description": "La plateforme tout-en-un pour les professionnels africains",
+      "themeColor": "#0A1628",
+      "backgroundColor": "#0A1628",
+      "lang": "fr",
+      "display": "standalone",
+      "orientation": "portrait"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "72ac2dd4-ccfd-4f7b-a325-c326c142bc69"
+      }
+    },
+    "owner": "hawtrix-hub"
+  }
+}
