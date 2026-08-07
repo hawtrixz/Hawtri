@@ -147,7 +147,6 @@ export default function NetworkScreen() {
                     {isCurrent && <View style={[styles.currentBadge, { backgroundColor: info.color }]}><Text style={styles.currentText}>Actuel</Text></View>}
                     {isAchieved && !isCurrent && <Ionicons name="checkmark-circle" size={16} color="#10B981" />}
                   </View>
-                  <Text style={styles.gradeMin}>{g.minCount}+ membres requis</Text>
                   <Text style={styles.gradeBenefit}>{g.benefit}</Text>
                 </View>
               </View>

@@ -35,7 +35,32 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const showAbout = () => {
+    Alert.alert(
+      "À propos de Hawtrix",
+      "Hawtrix est un projet ambitieux conçu par un groupe d'entrepreneurs visionnaires, sous l'impulsion du DG Haweil et de ses collaborateurs. \n\nNotre mission est de permettre à chaque Africain de générer des revenus complémentaires et d'offrir à ceux qui le souhaitent vraiment l'opportunité de s'immerger totalement pour réussir leur vie, se bâtir un nom et obtenir un titre de prestige. \n\nHawtrix est plus qu'une application, c'est un tremplin vers votre succès. \n\nBonne chance à toutes et à tous dans cette aventure !",
+      [{ text: "C'est parti !" }]
+    );
+  };
+
+  const contactSupport = () => {
+    const msg = `Bonjour, je suis ${user?.surname} ${user?.name} (ID: ${user?.referralCode}). J'ai besoin d'assistance sur Hawtrix.`;
+    const url = `https://wa.me/22890496651?text=${encodeURIComponent(msg)}`;
+    Linking.openURL(url);
+  };
+
   if (!user) return null;
+
+  const MENU_ITEMS = [
+    { icon: "person-circle", label: "Modifier le profil", color: "#3B82F6", route: "/profile-edit" },
+    { icon: "cash", label: "Retirer mes gains", color: "#10B981", route: "/withdraw" },
+    { icon: "people", label: "Mon réseau & parrainage", color: "#FF6B00", route: "/network" },
+    { icon: "notifications", label: "Notifications", color: "#F59E0B", route: "/notifications" },
+    ...(user?.grade === "president" ? [{ icon: "settings", label: "Administration", color: "#EF4444", route: "/admin" }] : []),
+    { icon: "chatbox-ellipses", label: "IA Hawtrix (Support)", color: "#8B5CF6", route: "/ai" },
+    { icon: "logo-whatsapp", label: "Contacter sur WhatsApp", color: "#25D366", action: contactSupport },
+    { icon: "information-circle", label: "À propos de Hawtrix", color: "#6B7280", action: showAbout },
+  ];
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
@@ -54,12 +79,10 @@ export default function ProfileScreen() {
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.fullName}>{user.surname} {user.name}</Text>
-              {user.grade !== "membre" && (
-                <View style={[styles.gradePill, { backgroundColor: gradeInfo.color + "30", borderColor: gradeInfo.color }]}>
-                  <Ionicons name="ribbon" size={11} color={gradeInfo.color} />
-                  <Text style={[styles.gradeText, { color: gradeInfo.color }]}>{gradeInfo.label}</Text>
-                </View>
-              )}
+              <View style={[styles.gradePill, { backgroundColor: gradeInfo.color + "30", borderColor: gradeInfo.color }]}>
+                <Ionicons name="ribbon" size={11} color={gradeInfo.color} />
+                <Text style={[styles.gradeText, { color: gradeInfo.color }]}>{gradeInfo.label}</Text>
+              </View>
             </View>
             <Text style={styles.profession}>{user.profession}</Text>
             <View style={styles.locationRow}>
@@ -85,23 +108,23 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {user.grade !== "membre" && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ma carte membre</Text>
-            <GradeCard user={user} />
-          </View>
-        )}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ma carte membre</Text>
+          <GradeCard user={user} />
+        </View>
 
-        {nextGrade && !["directeur2", "directeur5", "president"].includes(user.grade) && (
+        {nextGrade && !["president"].includes(user.grade) && (
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>Progression vers {GRADE_INFO[nextGrade[0] as keyof typeof GRADE_INFO]?.label}</Text>
+              <Text style={styles.progressTitle}>Objectif : {GRADE_INFO[nextGrade[0] as keyof typeof GRADE_INFO]?.label}</Text>
               <Text style={styles.progressCount}>{user.networkCount} / {nextGrade[1].minCount}</Text>
             </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${progress}%` as any, backgroundColor: gradeInfo.color }]} />
             </View>
-            <Text style={styles.progressHint}>Invitez {nextGrade[1].minCount - user.networkCount} membres de plus pour atteindre {GRADE_INFO[nextGrade[0] as keyof typeof GRADE_INFO]?.label}</Text>
+            <Text style={styles.progressHint}>
+              Encore <Text style={{ fontWeight: "700", color: "#FF6B00" }}>{nextGrade[1].minCount - user.networkCount}</Text> membres à inviter pour atteindre le rang de {GRADE_INFO[nextGrade[0] as keyof typeof GRADE_INFO]?.label}. Continuez vos efforts !
+            </Text>
           </View>
         )}
 
@@ -124,7 +147,12 @@ export default function ProfileScreen() {
             <TouchableOpacity
               key={i}
               style={[styles.menuItem, i === 0 && styles.menuItemFirst, i === MENU_ITEMS.length - 1 && styles.menuItemLast]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); item.route ? router.push(item.route as any) : Alert.alert("Bientôt disponible", "Cette fonctionnalité arrive très prochainement."); }}
+              onPress={() => { 
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); 
+                if (item.action) item.action();
+                else if (item.route) router.push(item.route as any); 
+                else Alert.alert("Bientôt disponible", "Cette fonctionnalité arrive très prochainement."); 
+              }}
               activeOpacity={0.8}
             >
               <View style={[styles.menuIcon, { backgroundColor: item.color + "20" }]}>
