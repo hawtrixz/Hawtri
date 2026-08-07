@@ -141,7 +141,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Hawtrix v1.0.0 · Togo</Text>
+        <Text style={styles.version}>Hawtrix v2.86.0 · Togo</Text>
       </ScrollView>
     </View>
   );
