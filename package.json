@@ -55,8 +55,8 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-crypto": "^57.0.1",
-    "expo-network": "~56.0.5",
-    "react-native-maps": "1.18.0"
+    "expo-crypto": "^15.0.9",
+    "expo-network": "~8.0.8",
+    "react-native-maps": "1.20.1"
   }
 }
