@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp, GRADE_INFO } from "@/context/AppContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,17 +9,6 @@ import { GradeCard } from "@/components/GradeCard";
 
 export default function ProfileScreen() {
   const { user, logout, notifications } = useApp();
-  
-  const MENU_ITEMS = [
-    { icon: "person-circle", label: "Modifier le profil", color: "#3B82F6", route: "/profile-edit" },
-    { icon: "cash", label: "Retirer mes gains", color: "#10B981", route: "/withdraw" },
-    { icon: "people", label: "Mon réseau & parrainage", color: "#FF6B00", route: "/network" },
-    { icon: "notifications", label: "Notifications", color: "#F59E0B", route: "/notifications" },
-    ...(user?.grade === "president" ? [{ icon: "settings", label: "Administration", color: "#EF4444", route: "/admin" }] : []),
-    { icon: "shield-checkmark", label: "Sécurité du compte", color: "#10B981", route: null },
-    { icon: "help-circle", label: "Support & Aide", color: "#8B5CF6", route: null },
-    { icon: "information-circle", label: "À propos de Hawtrix", color: "#6B7280", route: null },
-  ];
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const gradeInfo = user ? GRADE_INFO[user.grade] : GRADE_INFO["membre"];
@@ -36,11 +25,8 @@ export default function ProfileScreen() {
   };
 
   const showAbout = () => {
-    Alert.alert(
-      "À propos de Hawtrix",
-      "Hawtrix est un projet ambitieux conçu par un groupe d'entrepreneurs visionnaires, sous l'impulsion du DG Haweil et de ses collaborateurs. \n\nNotre mission est de permettre à chaque Africain de générer des revenus complémentaires et d'offrir à ceux qui le souhaitent vraiment l'opportunité de s'immerger totalement pour réussir leur vie, se bâtir un nom et obtenir un titre de prestige. \n\nHawtrix est plus qu'une application, c'est un tremplin vers votre succès. \n\nBonne chance à toutes et à tous dans cette aventure !",
-      [{ text: "C'est parti !" }]
-    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/about");
   };
 
   const contactSupport = () => {
@@ -57,7 +43,8 @@ export default function ProfileScreen() {
     { icon: "people", label: "Mon réseau & parrainage", color: "#FF6B00", route: "/network" },
     { icon: "notifications", label: "Notifications", color: "#F59E0B", route: "/notifications" },
     ...(user?.grade === "president" ? [{ icon: "settings", label: "Administration", color: "#EF4444", route: "/admin" }] : []),
-    { icon: "chatbox-ellipses", label: "IA Hawtrix (Support)", color: "#8B5CF6", route: "/ai" },
+    { icon: "shield-checkmark", label: "Sécurité du compte", color: "#10B981", route: "/security" },
+    { icon: "chatbox-ellipses", label: "IA Hawtrix (Support)", color: "#7C3AED", route: "/ai" },
     { icon: "logo-whatsapp", label: "Contacter sur WhatsApp", color: "#25D366", action: contactSupport },
     { icon: "information-circle", label: "À propos de Hawtrix", color: "#6B7280", action: showAbout },
   ];
@@ -108,10 +95,24 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ma carte membre</Text>
-          <GradeCard user={user} />
-        </View>
+        {gradeInfo.cardLevel >= 1 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ma carte membre</Text>
+            <GradeCard user={user} />
+          </View>
+        )}
+
+        {gradeInfo.cardLevel < 1 && (
+          <View style={styles.section}>
+            <View style={styles.cardLockedCard}>
+              <Ionicons name="lock-closed" size={22} color="#9CA3AF" />
+              <Text style={styles.cardLockedTitle}>Carte membre verrouillée</Text>
+              <Text style={styles.cardLockedText}>
+                Votre carte membre officielle est débloquée dès le grade <Text style={{ fontWeight: "700", color: "#CD7F32" }}>Pionier</Text>. Continuez à développer votre réseau pour l'obtenir !
+              </Text>
+            </View>
+          </View>
+        )}
 
         {nextGrade && !["president"].includes(user.grade) && (
           <View style={styles.progressCard}>
@@ -169,7 +170,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Hawtrix v2.86.0 · Togo</Text>
+        <Text style={styles.version}>Hawtrix v2.87.0 · Togo</Text>
       </ScrollView>
     </View>
   );
@@ -209,6 +210,9 @@ const styles = StyleSheet.create({
   progressBar: { height: 8, backgroundColor: "#F3F4F6", borderRadius: 4, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 4 },
   progressHint: { fontSize: 12, color: "#9CA3AF", fontFamily: "Inter_400Regular" },
+  cardLockedCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 20, gap: 10, alignItems: "center", borderWidth: 1, borderColor: "#F3F4F6" },
+  cardLockedTitle: { fontSize: 15, fontWeight: "700", color: "#0A1628", fontFamily: "Inter_700Bold" },
+  cardLockedText: { fontSize: 13, color: "#6B7280", fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
   referralCard: { marginHorizontal: 16, marginBottom: 12, backgroundColor: "#0A1628", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
   referralLeft: { flex: 1 },
   referralLabel: { fontSize: 12, color: "#94A3B8", fontFamily: "Inter_400Regular" },

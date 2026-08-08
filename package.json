@@ -1,6 +1,6 @@
 {
   "name": "@workspace/hawtrix",
-  "version": "2.86.0",
+  "version": "2.87.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -55,6 +55,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "expo-crypto": "^57.0.1",
     "expo-network": "~56.0.5",
     "react-native-maps": "1.18.0"
   }

@@ -64,6 +64,8 @@ export interface AdminUserView {
   referrerId: string | null;
   isBanned: boolean;
   isSuspended: boolean;
+  profession?: string;
+  neighborhood?: string;
 }
 
 export interface Message {
@@ -247,6 +249,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return clean in SPECIAL_ACCOUNTS;
   }, []);
 
+
   const setTermsAccepted = useCallback(async (v: boolean) => {
     setTermsAcceptedState(v);
     await AsyncStorage.setItem("hawtrix_terms", JSON.stringify(v));
@@ -328,8 +331,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await setTermsAccepted(true);
     }
 
-    addNotification({ title: "Bienvenue sur Hawtrix!", body: "Votre compte a été créé avec succès.", type: "system" });
-  }, [setPaymentDone, setTermsAccepted, addNotification]);
+    // Notification de bienvenue envoyée après que addNotification est défini
+    // (le hook est appelé de façon asynchrone ; on utilise setTimeout pour
+    // éviter le TDZ — la notification partira une fois le composant monté).
+    setTimeout(() => {
+      addNotification({ title: "Bienvenue sur Hawtrix!", body: "Votre compte a été créé avec succès.", type: "system" });
+    }, 100);
+  }, [setPaymentDone, setTermsAccepted]);
 
   const updateUser = useCallback(async (data: Partial<User>) => {
     setUser(prev => {
@@ -464,6 +472,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       referrerId: u.referrerId,
       isBanned: !!u.isBanned,
       isSuspended: !!u.isSuspended,
+      profession: u.profession ?? undefined,
+      neighborhood: u.neighborhood ?? undefined,
     }));
   }, []);
 
@@ -555,7 +565,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.multiRemove(["hawtrix_terms", "hawtrix_payment", "hawtrix_user"]);
+    // Le mot de passe 2FA (hawtrix_pass_hash / hawtrix_pass_set) n'est PAS
+    // effacé : il appartient au compte, pas à la session. Seul l'appareil
+    // actuel est dé-sécurisé (hawtrix_pass_hash_device_<id>) au logout.
+    const deviceId = await AsyncStorage.getItem("hawtrix_device_id");
+    const keys = ["hawtrix_terms", "hawtrix_payment", "hawtrix_user"];
+    if (deviceId) keys.push(`hawtrix_pass_hash_device_${deviceId}`);
+    await AsyncStorage.multiRemove(keys);
     setUser(null);
     setTermsAcceptedState(false);
     setPaymentDoneState(false);

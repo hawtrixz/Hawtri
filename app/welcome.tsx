@@ -46,7 +46,7 @@ export default function WelcomeScreen() {
           <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push("/terms")} activeOpacity={0.85}>
             <Text style={styles.btnPrimaryText}>Commencer</Text>
           </TouchableOpacity>
-          <Text style={styles.version}>Hawtrix v2.86.0 · Togo</Text>
+          <Text style={styles.version}>Hawtrix v2.87.0 · Togo</Text>
         </Animated.View>
       </View>
     </LinearGradient>

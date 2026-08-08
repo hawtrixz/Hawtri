@@ -18,15 +18,15 @@ const MLM_EXPLANATION = {
 };
 
 const GRADES_DISPLAY = [
-  { grade: "pionier" as Grade, minCount: 10, benefit: "Gains directs + cartes premium" },
-  { grade: "saphir" as Grade, minCount: 35, benefit: "Avantages supérieurs + arbre des filleuls" },
-  { grade: "rubis" as Grade, minCount: 100, benefit: "Statut honorifique + carte élégante" },
-  { grade: "emeraude" as Grade, minCount: 250, benefit: "Carte prestige + avantages exclusifs" },
-  { grade: "magnat" as Grade, minCount: 500, benefit: "Dividendes 4% sur revenus plateforme" },
-  { grade: "icone" as Grade, minCount: 1000, benefit: "Dividendes 8% majorés + statut d'icône" },
-  { grade: "directeur" as Grade, minCount: 10000, benefit: "Directeur : 6% dividendes + avantages directs" },
-  { grade: "directeur2" as Grade, minCount: 100000, benefit: "⭐⭐ 100 000 membres + 4 directeurs sur 4 branches · 14% dividendes" },
-  { grade: "directeur5" as Grade, minCount: 1000000, benefit: "⭐⭐⭐⭐⭐ 1 000 000 membres + 2 Directeurs ⭐⭐ sur 2 branches · 30% dividendes" },
+  { grade: "pionier" as Grade, benefit: "Gains directs et carte membre officielle" },
+  { grade: "saphir" as Grade, benefit: "Avantages supérieurs et arbre des filleuls" },
+  { grade: "rubis" as Grade, benefit: "Statut honorifique et carte élégante" },
+  { grade: "emeraude" as Grade, benefit: "Carte prestige et avantages exclusifs" },
+  { grade: "magnat" as Grade, benefit: "Accès aux dividendes sur les revenus de la plateforme" },
+  { grade: "icone" as Grade, benefit: "Dividendes majorés et statut d'icône" },
+  { grade: "directeur" as Grade, benefit: "Dividendes et avantages de direction" },
+  { grade: "directeur2" as Grade, benefit: "Directeur deux étoiles : réseau élargi et dividendes renforcés" },
+  { grade: "directeur5" as Grade, benefit: "Directeur cinq étoiles : réseau national et dividendes maximaux" },
 ];
 
 export default function NetworkScreen() {
@@ -134,7 +134,7 @@ export default function NetworkScreen() {
           <Text style={styles.sectionTitle}>Les grades Hawtrix</Text>
           {GRADES_DISPLAY.map((g, i) => {
             const info = GRADE_INFO[g.grade];
-            const isAchieved = user.networkCount >= g.minCount;
+            const isAchieved = user.networkCount >= info.minCount;
             const isCurrent = user.grade === g.grade;
             return (
               <View key={i} style={[styles.gradeRow, isCurrent && styles.gradeRowCurrent]}>

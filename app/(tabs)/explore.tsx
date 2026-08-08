@@ -42,8 +42,8 @@ export default function ExploreScreen() {
       .map(u => ({
         id: u.id,
         name: `${u.surname} ${u.name}`,
-        profession: u.profession,
-        neighborhood: u.neighborhood,
+        profession: u.profession ?? "Membre Hawtrix",
+        neighborhood: u.neighborhood ?? "Lomé",
         city: "Lomé", // Default
         rating: 5.0,
         reviews: 0,

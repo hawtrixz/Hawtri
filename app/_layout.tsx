@@ -31,6 +31,10 @@ function RootLayoutNav() {
       <Stack.Screen name="tutorial" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="ai" options={{ presentation: "modal" }} />
+      <Stack.Screen name="security" />
+      <Stack.Screen name="unlock" />
+      <Stack.Screen name="about" />
+      <Stack.Screen name="update" />
       <Stack.Screen name="development" />
       <Stack.Screen name="map" />
       <Stack.Screen name="notifications" />

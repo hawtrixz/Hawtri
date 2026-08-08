@@ -1,20 +1,68 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
+import { verifyPassword, hasPassword } from "@/utils/auth2fa";
 
 export default function WithdrawScreen() {
   const { user, withdraw } = useApp();
-  const [step, setStep] = useState<"amount" | "verify">("amount");
+  const [step, setStep] = useState<"amount" | "password" | "verify">("amount");
   const [amount, setAmount] = useState("");
   const [code, setCode] = useState("");
+  const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passAttempts, setPassAttempts] = useState(0);
+  const [passRequired, setPassRequired] = useState(false);
+  const [checked, setChecked] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Au chargement, on détermine si le retrait exige le mot de passe 2FA.
+  useEffect(() => {
+    checkPassword();
+  }, []);
+
+  const checkPassword = async () => {
+    const required = await hasPassword();
+    setPassRequired(required);
+    setStep(required ? "password" : "amount");
+    setChecked(true);
+  };
+
+  const handlePassword = async () => {
+    if (!pass) {
+      Alert.alert("Champ vide", "Entrez votre mot de passe personnel pour continuer.");
+      return;
+    }
+    setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const ok = await verifyPassword(pass);
+      if (!ok) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setPassAttempts(a => a + 1);
+        if (passAttempts + 1 >= 3) {
+          Alert.alert("Mot de passe incorrect", "Trop de tentatives. Réessayez plus tard avec votre mot de passe exact.", [
+            { text: "OK", onPress: () => router.back() },
+          ]);
+          return;
+        }
+        Alert.alert("Mot de passe incorrect", `Tentative ${passAttempts + 1}/3.`);
+        setPass("");
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPassAttempts(0);
+      setPass("");
+      setStep("amount");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNext = () => {
     const val = parseInt(amount, 10);
@@ -69,7 +117,40 @@ export default function WithdrawScreen() {
       </LinearGradient>
 
       <KeyboardAwareScrollViewCompat style={styles.scroll} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
-        {step === "amount" ? (
+        {step === "password" && checked ? (
+          <View style={styles.card}>
+            <View style={styles.verifyIcon}>
+              <Ionicons name="lock-closed" size={48} color="#10B981" />
+            </View>
+            <Text style={styles.verifyTitle}>Mot de passe requis</Text>
+            <Text style={styles.verifyText}>
+              Pour sécuriser vos gains, entrez votre mot de passe personnel avant de continuer le retrait.
+            </Text>
+
+            <Text style={styles.label}>Mot de passe</Text>
+            <TextInput
+              style={[styles.input, styles.codeInput]}
+              value={pass}
+              onChangeText={setPass}
+              placeholder="••••••••"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              autoCapitalize="none"
+              maxLength={40}
+            />
+
+            <View style={styles.warnCard}>
+              <Ionicons name="warning" size={18} color="#EF4444" />
+              <Text style={styles.warnText}>
+                Compte irrécupérable si mot de passe oublié. Hawtrix ne peut ni récupérer ni réinitialiser votre mot de passe.
+              </Text>
+            </View>
+
+            <TouchableOpacity style={[styles.submitBtn, loading && styles.disabled]} onPress={handlePassword} disabled={loading}>
+              <Text style={styles.submitBtnText}>{loading ? "Vérification..." : "Continuer"}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : step === "amount" ? (
           <View style={styles.card}>
             <Text style={styles.balanceLabel}>Solde disponible</Text>
             <Text style={styles.balanceValue}>{user?.balance ?? 0} F CFA</Text>
@@ -146,6 +227,8 @@ const styles = StyleSheet.create({
   submitBtnText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
   disabled: { opacity: 0.6 },
   verifyIcon: { alignSelf: "center", marginBottom: 16 },
+  warnCard: { flexDirection: "row", gap: 10, backgroundColor: "rgba(239,68,68,0.06)", borderRadius: 12, padding: 12, marginTop: 16, borderWidth: 1, borderColor: "rgba(239,68,68,0.2)" },
+  warnText: { flex: 1, fontSize: 12, color: "#B91C1C", lineHeight: 17 },
   verifyTitle: { fontSize: 18, fontWeight: "700", color: "#0A1628", textAlign: "center", marginBottom: 8 },
   verifyText: { fontSize: 14, color: "#4B5563", textAlign: "center", lineHeight: 20, marginBottom: 24 },
   codeInput: { textAlign: "center", fontSize: 24, letterSpacing: 8, fontWeight: "700" },
