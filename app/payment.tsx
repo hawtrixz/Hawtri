@@ -22,9 +22,7 @@ const SUPPORT_WHATSAPP = "https://wa.me/message/ITZ45LLE2RKSM1";
 // Code secret calculé à partir du numéro ayant effectué le dépôt
 // (v2.85.3, conservé) :
 // `code = (somme des 8 derniers chiffres du numéro) × 777 + 123456`
-// Le propriétaire du compte vérifie le dépôt reçu et envoie
-// manuellement le code au client par WhatsApp, uniquement sur le
-// numéro qui a fait le dépôt.
+// Le support vérifie le dépôt reçu et envoie manuellement le code au client.
 function activationCodeFor(phone: string): string {
   const digits = phone.replace(/\D/g, "").slice(-8);
   const sum = digits.split("").reduce((total, digit) => total + Number(digit), 0);
@@ -148,7 +146,7 @@ export default function PaymentScreen() {
             <View style={styles.infoBox}>
               <Ionicons name="information-circle" size={16} color="#FF6B00" />
               <Text style={styles.infoText}>
-                Faites un transfert manuel de <Text style={styles.infoHighlight}>2 000 FCFA</Text> au numéro {m.label} <Text style={styles.infoHighlight}>{m.number}</Text>. Après réception, contactez le support pour obtenir votre code d’activation.
+                Faites un transfert manuel de <Text style={styles.infoHighlight}>2 000 FCFA</Text> au numéro {m.label} <Text style={styles.infoHighlight}>{m.number}</Text>. Après réception, contactez le support via WhatsApp pour obtenir votre code d’activation.
               </Text>
             </View>
             <TouchableOpacity onPress={() => Linking.openURL(SUPPORT_WHATSAPP)} style={styles.supportBtn} activeOpacity={0.8}>

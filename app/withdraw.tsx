@@ -54,7 +54,7 @@ export default function WithdrawScreen() {
 
   const contactSupport = () => {
     const msg = `Bonjour, je souhaite effectuer un retrait de ${amount} F CFA sur mon compte Hawtrix. Mon numéro est ${user?.phone}. Merci de me fournir le code de retrait.`;
-    const url = `https://wa.me/22890496651?text=${encodeURIComponent(msg)}`;
+    const url = `https://wa.me/message/ITZ45LLE2RKSM1?text=${encodeURIComponent(msg)}`;
     Linking.openURL(url);
   };
 

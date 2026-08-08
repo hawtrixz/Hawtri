@@ -45,7 +45,7 @@ export default function ProfileScreen() {
 
   const contactSupport = () => {
     const msg = `Bonjour, je suis ${user?.surname} ${user?.name} (ID: ${user?.referralCode}). J'ai besoin d'assistance sur Hawtrix.`;
-    const url = `https://wa.me/22890496651?text=${encodeURIComponent(msg)}`;
+    const url = `https://wa.me/message/ITZ45LLE2RKSM1?text=${encodeURIComponent(msg)}`;
     Linking.openURL(url);
   };
 
