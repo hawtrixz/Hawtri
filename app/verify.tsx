@@ -89,7 +89,7 @@ export default function VerifyScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Invitation à définir un mot de passe personnel (double facteur)
       // immédiatement après l'inscription, avant le tutoriel.
-      router.replace("/security");
+      router.replace({ pathname: "/security", params: { flow: "registration" } });
     } catch (err) {
       setLoading(false);
       Alert.alert("Vérification impossible", err instanceof Error ? err.message : "Impossible de valider votre code pour le moment. Vérifiez votre connexion et réessayez.");

@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -12,6 +12,8 @@ type Mode = "intro" | "create" | "confirm" | "done" | "unset";
 
 export default function SecurityScreen() {
   const { user } = useApp();
+  const params = useLocalSearchParams<{ flow?: string }>();
+  const isRegistration = params.flow === "registration";
   const [mode, setMode] = useState<Mode>("intro");
   const [password, setPasswordState] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -42,6 +44,16 @@ export default function SecurityScreen() {
       Alert.alert("Erreur", "Impossible d'enregistrer le mot de passe.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const finishSecuritySetup = () => {
+    // Après une inscription, ne jamais remonter la pile vers /verify puis /register.
+    // Le compte vient d'être créé : le tutoriel est l'étape suivante du parcours.
+    if (isRegistration) {
+      router.replace("/tutorial");
+    } else {
+      router.back();
     }
   };
 
@@ -166,7 +178,7 @@ export default function SecurityScreen() {
                   Ne l'oubliez jamais : <Text style={[styles.infoBold, { color: "#EF4444" }]}>compte irrécupérable si mot de passe oublié</Text>.
                 </Text>
               </View>
-              <TouchableOpacity style={styles.btnPrimary} onPress={() => router.back()} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.btnPrimary} onPress={finishSecuritySetup} activeOpacity={0.85}>
                 <Text style={styles.btnPrimaryText}>C'est parti !</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnTertiary} onPress={handleRemove} disabled={uninstalling} activeOpacity={0.85}>
@@ -192,7 +204,7 @@ export default function SecurityScreen() {
                   Attention : sans mot de passe, toute personne ayant accès à votre téléphone peut consulter votre compte et vos gains.
                 </Text>
               </View>
-              <TouchableOpacity style={styles.btnPrimary} onPress={async () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.btnPrimary} onPress={async () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); finishSecuritySetup(); }} activeOpacity={0.85}>
                 <Text style={styles.btnPrimaryText}>Compris, continuer</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnTertiary} onPress={() => setMode("create")} activeOpacity={0.85}>
