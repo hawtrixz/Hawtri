@@ -6,7 +6,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Te
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
 import { Ionicons } from "@expo/vector-icons";
-import { setPassword, clearPassword, hasPassword } from "@/utils/auth2fa";
+import { setPassword } from "@/utils/auth2fa";
 
 type Mode = "intro" | "create" | "confirm" | "done" | "unset";
 
@@ -57,27 +57,6 @@ export default function SecurityScreen() {
     }
   };
 
-  const handleRemove = () => {
-    Alert.alert(
-      "Supprimer le mot de passe ?",
-      "Sans mot de passe, votre compte sera moins protégé : n'importe qui ayant accès à votre téléphone pourra consulter votre compte et vos gains.",
-      [
-        { text: "Garder le mot de passe", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            setUninstalling(true);
-            await clearPassword();
-            setUninstalling(false);
-            setMode("intro");
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <View style={[styles.container, { paddingTop: topPad }]}>
@@ -115,9 +94,6 @@ export default function SecurityScreen() {
               </View>
               <TouchableOpacity style={styles.btnPrimary} onPress={() => setMode("create")} activeOpacity={0.85}>
                 <Text style={styles.btnPrimaryText}>Définir mon mot de passe</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.btnSecondary} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMode("unset"); }} activeOpacity={0.85}>
-                <Text style={styles.btnSecondaryText}>Je préfère ne pas mettre de mot de passe</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -181,9 +157,6 @@ export default function SecurityScreen() {
               <TouchableOpacity style={styles.btnPrimary} onPress={finishSecuritySetup} activeOpacity={0.85}>
                 <Text style={styles.btnPrimaryText}>C'est parti !</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.btnTertiary} onPress={handleRemove} disabled={uninstalling} activeOpacity={0.85}>
-                <Text style={styles.btnTertiaryText}>Supprimer le mot de passe</Text>
-              </TouchableOpacity>
             </View>
           )}
 
@@ -206,9 +179,6 @@ export default function SecurityScreen() {
               </View>
               <TouchableOpacity style={styles.btnPrimary} onPress={async () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); finishSecuritySetup(); }} activeOpacity={0.85}>
                 <Text style={styles.btnPrimaryText}>Compris, continuer</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.btnTertiary} onPress={() => setMode("create")} activeOpacity={0.85}>
-                <Text style={styles.btnTertiaryText}>Finalement, définir un mot de passe</Text>
               </TouchableOpacity>
             </View>
           )}

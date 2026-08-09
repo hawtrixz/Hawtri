@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { backend } from "@/utils/backend";
 
 export type Grade =
   | "membre"
@@ -104,7 +105,8 @@ interface AppContextType {
   isLoading: boolean;
   setTermsAccepted: (v: boolean) => void;
   setPaymentDone: (v: boolean) => void;
-  createUser: (data: Omit<User, "id" | "referralCode" | "grade" | "joinedAt" | "totalEarnings" | "networkCount" | "branches" | "tutorialSeen" | "balance">) => Promise<void>;
+  createUser: (data: Omit<User, "id" | "referralCode" | "grade" | "joinedAt" | "totalEarnings" | "networkCount" | "branches" | "tutorialSeen" | "balance"> & { password: string }) => Promise<void>;
+  loginUser: (phone: string, password: string) => Promise<void>;
   updateUser: (data: Partial<User>) => Promise<void>;
   markTutorialSeen: () => Promise<void>;
   addNotification: (n: Omit<Notification, "id" | "timestamp" | "read">) => void;
@@ -260,83 +262,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("hawtrix_payment", JSON.stringify(v));
   }, []);
 
-  const createUser = useCallback(async (data: Omit<User, "id" | "referralCode" | "grade" | "joinedAt" | "totalEarnings" | "networkCount" | "branches" | "tutorialSeen" | "balance">) => {
+  const createUser = useCallback(async (data: Omit<User, "id" | "referralCode" | "grade" | "joinedAt" | "totalEarnings" | "networkCount" | "branches" | "tutorialSeen" | "balance"> & { password: string }) => {
     const cleanPhone = (data.phone ?? "").replace(/\s/g, "");
-    const seeded = SPECIAL_ACCOUNTS[cleanPhone];
 
-    const newUser: User = seeded ? { ...seeded } : {
-      ...data,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
-      referralCode: generateCode(),
-      grade: "membre",
-      joinedAt: new Date().toISOString(),
-      totalEarnings: 0,
-      networkCount: 0,
-      branches: {},
-      tutorialSeen: false,
-      balance: 0,
-    };
+    // Les comptes avec mot de passe sont persistés côté serveur. Le mot de passe
+    // n'est jamais écrit dans AsyncStorage et ne peut pas être réinitialisé par l'APK.
+    const remote = await backend.register({
+      name: data.name,
+      surname: data.surname,
+      phone: cleanPhone,
+      password: data.password,
+      profession: data.profession,
+      neighborhood: data.neighborhood,
+      referrerCode: data.referrerId ?? undefined,
+    });
+    const remoteUser = remote.user as unknown as User;
+    setUser(remoteUser);
+    await AsyncStorage.setItem("hawtrix_user", JSON.stringify(remoteUser));
+    await setTermsAccepted(true);
+    await setPaymentDone(true);
+    return;
+  }, [setPaymentDone, setTermsAccepted]);
 
-    const rawAll = await AsyncStorage.getItem("hawtrix_all_users");
-    let allUsers: User[] = rawAll ? JSON.parse(rawAll) : [];
-    
-    if (!allUsers.find(u => u.phone === newUser.phone)) {
-        let remainingToDistribute = 2000;
-        
-        // 1. Part du Président (p0 = 750f)
-        const president = allUsers.find(u => u.grade === "president");
-        if (president) {
-          president.balance += 750;
-          president.totalEarnings += 750;
-          remainingToDistribute -= 750;
-        }
-
-        // 2. Distribution réseau (p1 = 500f, pn = p(n-1)/3)
-        let currentReferrerId = newUser.referrerId;
-        let currentLevelPayment = 500;
-        
-        while (currentReferrerId && remainingToDistribute > 0) {
-          const referrer = allUsers.find(u => u.referralCode === currentReferrerId);
-          if (referrer) {
-            const amountToPay = Math.min(currentLevelPayment, remainingToDistribute);
-            referrer.balance += amountToPay;
-            referrer.totalEarnings += amountToPay;
-            referrer.networkCount = (referrer.networkCount || 0) + 1;
-            
-            remainingToDistribute -= amountToPay;
-            currentLevelPayment = Math.floor(amountToPay / 3);
-            currentReferrerId = referrer.referrerId;
-            
-            if (currentLevelPayment <= 0) break;
-          } else {
-            break;
-          }
-        }
-
-        // 3. Le reliquat éventuel revient au Président
-        if (remainingToDistribute > 0 && president) {
-          president.balance += remainingToDistribute;
-          president.totalEarnings += remainingToDistribute;
-        }
-
-        allUsers.push(newUser);
-        await AsyncStorage.setItem("hawtrix_all_users", JSON.stringify(allUsers));
-    }
-
-    setUser(newUser);
-    await AsyncStorage.setItem("hawtrix_user", JSON.stringify(newUser));
-
-    if (seeded) {
-      await setPaymentDone(true);
-      await setTermsAccepted(true);
-    }
-
-    // Notification de bienvenue envoyée après que addNotification est défini
-    // (le hook est appelé de façon asynchrone ; on utilise setTimeout pour
-    // éviter le TDZ — la notification partira une fois le composant monté).
-    setTimeout(() => {
-      addNotification({ title: "Bienvenue sur Hawtrix!", body: "Votre compte a été créé avec succès.", type: "system" });
-    }, 100);
+  const loginUser = useCallback(async (phone: string, password: string) => {
+    const remote = await backend.login(phone.replace(/\s/g, ""), password);
+    const remoteUser = remote.user as unknown as User;
+    setUser(remoteUser);
+    await AsyncStorage.setItem("hawtrix_user", JSON.stringify(remoteUser));
+    await setTermsAccepted(true);
+    await setPaymentDone(true);
   }, [setPaymentDone, setTermsAccepted]);
 
   const updateUser = useCallback(async (data: Partial<User>) => {
@@ -580,7 +534,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       user, termsAccepted, paymentDone, conversations, notifications, isLoading,
-      setTermsAccepted, setPaymentDone, createUser, updateUser, markTutorialSeen,
+      setTermsAccepted, setPaymentDone, createUser, loginUser, updateUser, markTutorialSeen,
       addNotification, markNotificationRead, sendMessage, getOrCreateConversation,
       markConversationRead, logout, isSpecialPhone,
       withdraw, banUser, suspendUser, getAllUsers,

@@ -26,7 +26,7 @@ import { isOnline } from "@/utils/network";
 const VERIFY_URL = (process.env.EXPO_PUBLIC_VERIFY_URL ?? "https://hawtrix.tg/verify").toString();
 
 export default function VerifyScreen() {
-  const params = useLocalSearchParams<{ phone: string; name: string; surname: string; profession: string; neighborhood: string; referrerId: string }>();
+  const params = useLocalSearchParams<{ phone: string; name: string; surname: string; profession: string; neighborhood: string; referrerId: string; password: string }>();
   const { createUser } = useApp();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -85,11 +85,12 @@ export default function VerifyScreen() {
         neighborhood: params.neighborhood ?? "",
         phone: params.phone ?? "",
         referrerId: params.referrerId || null,
+        password: params.password ?? "",
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Invitation à définir un mot de passe personnel (double facteur)
-      // immédiatement après l'inscription, avant le tutoriel.
-      router.replace({ pathname: "/security", params: { flow: "registration" } });
+      // Le mot de passe 2FA a déjà été défini et enregistré côté serveur
+      // avant la validation finale. Le tutoriel est l'étape suivante.
+      router.replace("/tutorial");
     } catch (err) {
       setLoading(false);
       Alert.alert("Vérification impossible", err instanceof Error ? err.message : "Impossible de valider votre code pour le moment. Vérifiez votre connexion et réessayez.");

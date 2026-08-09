@@ -25,6 +25,8 @@ export default function RegisterScreen() {
   const [neighborhood, setNeighborhood] = useState("");
   const [referrerId, setReferrerId] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -43,10 +45,18 @@ export default function RegisterScreen() {
       Alert.alert("Téléphone invalide", "Veuillez entrer un numéro de téléphone valide.");
       return;
     }
+    if (password.length < 6) {
+      Alert.alert("Mot de passe trop court", "Le mot de passe à deux facteurs doit contenir au moins 6 caractères.");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      Alert.alert("Mots de passe différents", "Les deux mots de passe doivent être identiques.");
+      return;
+    }
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await new Promise(r => setTimeout(r, 800));
-    router.push({ pathname: "/verify", params: { phone, name, surname, profession, neighborhood, referrerId } });
+    router.push({ pathname: "/verify", params: { phone, name, surname, profession, neighborhood, referrerId, password } });
     setLoading(false);
   };
 
@@ -105,6 +115,11 @@ export default function RegisterScreen() {
           <Text style={styles.label}>Numéro de téléphone <Text style={styles.required}>*</Text></Text>
           <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="+228 XX XX XX XX" placeholderTextColor="#9CA3AF" keyboardType="phone-pad" />
           <Text style={styles.hint}>Un code de vérification SMS sera envoyé à ce numéro</Text>
+          <Text style={styles.label}>Mot de passe à deux facteurs <Text style={styles.required}>*</Text></Text>
+          <TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Au moins 6 caractères" placeholderTextColor="#9CA3AF" secureTextEntry autoCapitalize="none" />
+          <Text style={styles.label}>Confirmer le mot de passe <Text style={styles.required}>*</Text></Text>
+          <TextInput style={styles.input} value={passwordConfirm} onChangeText={setPasswordConfirm} placeholder="Répétez le mot de passe" placeholderTextColor="#9CA3AF" secureTextEntry autoCapitalize="none" />
+          <Text style={styles.hint}>Ce mot de passe sera conservé sur le serveur et sera obligatoire pour vous reconnecter sur un autre téléphone.</Text>
         </View>
 
         <View style={styles.card}>

@@ -44,7 +44,10 @@ export default function WelcomeScreen() {
 
         <Animated.View entering={FadeInUp.delay(1100).duration(700)} style={styles.btnArea}>
           <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push("/terms")} activeOpacity={0.85}>
-            <Text style={styles.btnPrimaryText}>Commencer</Text>
+            <Text style={styles.btnPrimaryText}>Créer un compte</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnSecondary} onPress={() => router.push("/login")} activeOpacity={0.85}>
+            <Text style={styles.btnSecondaryText}>Se connecter</Text>
           </TouchableOpacity>
           <Text style={styles.version}>Hawtrix v2.87.0 · Togo</Text>
         </Animated.View>
@@ -69,5 +72,7 @@ const styles = StyleSheet.create({
   btnArea: { width: "100%", alignItems: "center", gap: 12 },
   btnPrimary: { width: "100%", backgroundColor: "#FF6B00", borderRadius: 16, paddingVertical: 18, alignItems: "center" },
   btnPrimaryText: { fontSize: 17, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+  btnSecondary: { width: "100%", borderRadius: 16, paddingVertical: 16, alignItems: "center", borderWidth: 1.5, borderColor: "#64748B" },
+  btnSecondaryText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
   version: { fontSize: 12, color: "#475569", fontFamily: "Inter_400Regular" },
 });
