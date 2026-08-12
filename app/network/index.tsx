@@ -1,11 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp, GRADE_INFO, Grade } from "@/context/AppContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const MLM_EXPLANATION = {
   title: "Comment fonctionne le réseau Hawtrix ?",
@@ -30,12 +30,25 @@ const GRADES_DISPLAY = [
 ];
 
 export default function NetworkScreen() {
-  const { user } = useApp();
+  const { user, refreshProfile } = useApp();
   const [showExplain, setShowExplain] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const gradeInfo = user ? GRADE_INFO[user.grade] : GRADE_INFO["membre"];
+useFocusEffect(useCallback(() => {
+    refreshProfile();
+  }, [refreshProfile]));
 
+  const handleRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshProfile();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshProfile, refreshing]);
   const handleShare = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
@@ -55,11 +68,16 @@ export default function NetworkScreen() {
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Mon Réseau</Text>
-          {user.grade === "saphir" || user.grade === "rubis" || user.grade === "emeraude" || user.grade === "magnat" || user.grade === "icone" || user.grade === "directeur" ? (
-            <TouchableOpacity onPress={() => router.push("/network/tree" as any)} style={styles.treeBtn} activeOpacity={0.7}>
-              <Ionicons name="git-network" size={22} color="#FF6B00" />
+          <View style={styles.headerActions}>
+            {user.grade === "saphir" || user.grade === "rubis" || user.grade === "emeraude" || user.grade === "magnat" || user.grade === "icone" || user.grade === "directeur" ? (
+              <TouchableOpacity onPress={() => router.push("/network/tree" as any)} style={styles.treeBtn} activeOpacity={0.7}>
+                <Ionicons name="git-network" size={22} color="#FF6B00" />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity onPress={handleRefresh} style={styles.refreshBtn} activeOpacity={0.7} disabled={refreshing}>
+              <Ionicons name={refreshing ? "sync" : "refresh"} size={22} color="#FFFFFF" />
             </TouchableOpacity>
-          ) : <View style={{ width: 40 }} />}
+          </View>
         </View>
 
         <View style={styles.codeCard}>
@@ -165,6 +183,8 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
   treeBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  refreshBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   codeCard: { backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 20, gap: 12, borderWidth: 1, borderColor: "rgba(255,107,0,0.3)" },
   codeLabel: { fontSize: 13, color: "#94A3B8", fontFamily: "Inter_400Regular" },
   codeValue: { fontSize: 28, fontWeight: "800", color: "#FF6B00", fontFamily: "Inter_700Bold", letterSpacing: 4 },
