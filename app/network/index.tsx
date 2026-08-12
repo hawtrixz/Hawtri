@@ -100,6 +100,7 @@ useFocusEffect(useCallback(() => {
         <View style={styles.statsRow}>
           {[
             { label: "Membres invités", value: user.networkCount, icon: "people", color: "#FF6B00" },
+            { label: "Solde disponible", value: `${user.balance} F`, icon: "wallet", color: "#2563EB" },
             { label: "Gains totaux", value: `${user.totalEarnings} F`, icon: "cash", color: "#10B981" },
             { label: "Grade actuel", value: gradeInfo.label, icon: "ribbon", color: gradeInfo.color },
           ].map(s => (
