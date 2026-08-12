@@ -547,7 +547,7 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
   return (
     <AppContext.Provider value={{
       user, termsAccepted, paymentDone, conversations, notifications, isLoading,
-      setTermsAccepted, setPaymentDone, createUser, loginUser, updateUser, markTutorialSeen,
+      setTermsAccepted, setPaymentDone, createUser, loginUser, refreshProfile, updateUser, markTutorialSeen,
       addNotification, markNotificationRead, sendMessage, getOrCreateConversation,
       markConversationRead, logout, isSpecialPhone,
       withdraw, banUser, suspendUser, getAllUsers,
