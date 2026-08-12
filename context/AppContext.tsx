@@ -107,6 +107,7 @@ interface AppContextType {
   setPaymentDone: (v: boolean) => void;
   createUser: (data: Omit<User, "id" | "referralCode" | "grade" | "joinedAt" | "totalEarnings" | "networkCount" | "branches" | "tutorialSeen" | "balance"> & { password: string }) => Promise<void>;
   loginUser: (phone: string, password: string) => Promise<void>;
+  refreshProfile: () => Promise<User | null>;
   updateUser: (data: Partial<User>) => Promise<void>;
   markTutorialSeen: () => Promise<void>;
   addNotification: (n: Omit<Notification, "id" | "timestamp" | "read">) => void;
@@ -212,7 +213,7 @@ export const GRADE_INFO: Record<Grade, { label: string; color: string; minCount:
   directeur:  { label: "Directeur",          color: "#FF6B00", minCount: 10000,    dividendPct: 6,   cardLevel: 7 },
   directeur2: { label: "Directeur ⭐⭐",     color: "#E8B800", minCount: 100000,   dividendPct: 14,  cardLevel: 8 },
   directeur5: { label: "Directeur ⭐⭐⭐⭐⭐", color: "#C0A020", minCount: 1000000, dividendPct: 30,  cardLevel: 9 },
-  president:  { label: "Président Fondateur",color: "#FFD700", minCount: 9999999,  dividendPct: 40,  cardLevel: 10 },
+  president:  { label: "Président Fondateur",color: "#FFD700", minCount: 99999999999,  dividendPct: 40,  cardLevel: 10 },
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -241,12 +242,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (userRaw) setUser(JSON.parse(userRaw));
       if (convsRaw) setConversations(JSON.parse(convsRaw));
       if (notifsRaw) setNotifications(JSON.parse(notifsRaw));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      } finally {
+    setIsLoading(false);
+  }
+};
 
-  const isSpecialPhone = useCallback((phone: string): boolean => {
+const refreshProfile = useCallback(async (): Promise<User | null> => {
+  try {
+    const remoteUser = await backend.getMe();
+    const nextUser = remoteUser as unknown as User;
+    setUser(nextUser);
+    await AsyncStorage.setItem("hawtrix_user", JSON.stringify(nextUser));
+    return nextUser;
+  } catch {
+    return null;
+  }
+}, []);
+
+const isSpecialPhone = useCallback((phone: string): boolean => {
     const clean = phone.replace(/\s/g, "");
     return clean in SPECIAL_ACCOUNTS;
   }, []);
