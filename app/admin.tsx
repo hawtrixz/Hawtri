@@ -114,7 +114,12 @@ export default function AdminScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Administration</Text>
-        <Text style={styles.headerSub}>Gestion des membres et lutte contre la fraude</Text>
+        <TouchableOpacity onPress={fetchUsers} style={{ marginTop: 10 }}>
+  <Text style={{ color: "#FFB26B", fontWeight: "700" }}>
+    Actualiser la liste
+  </Text>
+</TouchableOpacity>
+
       </LinearGradient>
 
       {loading ? (
