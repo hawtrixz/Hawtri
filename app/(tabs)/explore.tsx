@@ -6,54 +6,57 @@ import { FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/context/AppContext";
-
-const STATIC_PROVIDERS = [
-  { id: "1", name: "Kossi Atcha", profession: "Électricien", neighborhood: "Tokoin", city: "Lomé", rating: 4.8, reviews: 34, available: true, experience: 8, phone: "+228 90 12 34 56" },
-  { id: "2", name: "Akossiwa Manu", profession: "Couturière", neighborhood: "Bè", city: "Lomé", rating: 4.9, reviews: 67, available: true, experience: 12, phone: "+228 91 23 45 67" },
-  { id: "3", name: "Mawuli Koffi", profession: "Développeur web", neighborhood: "Agbalepedogan", city: "Lomé", rating: 4.7, reviews: 21, available: false, experience: 5, phone: "+228 92 34 56 78" },
-  { id: "4", name: "Afi Mensah", profession: "Coiffeuse", neighborhood: "Agoè", city: "Lomé", rating: 4.6, reviews: 89, available: true, experience: 7, phone: "+228 93 45 67 89" },
-  { id: "5", name: "Kodzo Dossou", profession: "Plombier", neighborhood: "Hévié", city: "Lomé", rating: 4.5, reviews: 45, available: true, experience: 10, phone: "+228 94 56 78 90" },
-  { id: "6", name: "Yawa Segla", profession: "Comptable", neighborhood: "Djidjolé", city: "Lomé", rating: 4.9, reviews: 28, available: true, experience: 9, phone: "+228 95 67 89 01" },
-  { id: "7", name: "Kwame Agbo", profession: "Mécanicien", neighborhood: "Kégué", city: "Lomé", rating: 4.4, reviews: 112, available: false, experience: 15, phone: "+228 96 78 90 12" },
-  { id: "8", name: "Abla Foli", profession: "Réparation téléphones", neighborhood: "Tokoin", city: "Lomé", rating: 4.7, reviews: 58, available: true, experience: 6, phone: "+228 97 89 01 23" },
-  { id: "9", name: "Edem Lawson", profession: "Maçon", neighborhood: "Nyékonakpoè", city: "Lomé", rating: 4.6, reviews: 33, available: true, experience: 11, phone: "+228 98 90 12 34" },
-  { id: "10", name: "Sena Amavi", profession: "Photographe", neighborhood: "Adawlato", city: "Lomé", rating: 5.0, reviews: 19, available: true, experience: 4, phone: "+228 99 01 23 45" },
-];
+import { backend } from "@/utils/backend";
 
 const FILTERS = ["Tous", "Disponibles", "Électricité", "Informatique", "Couture", "Coiffure", "Plomberie", "Mécanique"];
 
 export default function ExploreScreen() {
-  const { getAllUsers, user: currentUser } = useApp();
+  const { user: currentUser } = useApp();
   const params = useLocalSearchParams<{ category?: string }>();
   const [search, setSearch] = useState(params.category ?? "");
   const [activeFilter, setActiveFilter] = useState(params.category ?? "Tous");
-  const [allProviders, setAllProviders] = useState<any[]>(STATIC_PROVIDERS);
+  const [allProviders, setAllProviders] = useState<any[]>([]);
+const [loading, setLoading] = useState(false);
+const [reloadKey, setReloadKey] = useState(0);
+
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    const users = await getAllUsers();
-    const mappedUsers = users
-      .filter(u => u.id !== currentUser?.id && !u.isBanned)
-      .map(u => ({
-        id: u.id,
-        name: `${u.surname} ${u.name}`,
-        profession: u.profession ?? "Membre Hawtrix",
-        neighborhood: u.neighborhood ?? "Lomé",
-        city: "Lomé", // Default
-        rating: 5.0,
-        reviews: 0,
-        available: !u.isSuspended,
-        experience: 0,
-        phone: u.phone,
-        isRealUser: true
-      }));
-    setAllProviders([...STATIC_PROVIDERS, ...mappedUsers]);
+  useEffect(() => {
+  let cancelled = false;
+  const timer = setTimeout(async () => {
+    setLoading(true);
+    try {
+      const users = await backend.searchUsers(search.trim());
+      if (!cancelled) {
+        setAllProviders(users
+          .filter((u: any) => u.id !== currentUser?.id && !u.is_banned)
+          .map((u: any) => ({
+            id: u.id,
+            name: `${u.surname || ""} ${u.name || ""}`.trim(),
+            profession: u.profession || "Membre Hawtrix",
+            neighborhood: u.neighborhood || "Lomé",
+            city: "Lomé",
+            rating: 5.0,
+            reviews: 0,
+            available: !u.is_suspended,
+            experience: 0,
+            phone: u.phone || "",
+            isRealUser: true,
+          })));
+      }
+    } catch {
+      if (!cancelled) setAllProviders([]);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  }, 250);
+  return () => {
+    cancelled = true;
+    clearTimeout(timer);
   };
+}, [search, currentUser?.id, reloadKey]);
 
   const filtered = allProviders.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.profession.toLowerCase().includes(search.toLowerCase()) || p.neighborhood.toLowerCase().includes(search.toLowerCase());
