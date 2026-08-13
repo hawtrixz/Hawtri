@@ -6,10 +6,13 @@ import { Ionicons } from "@expo/vector-icons";
 
 const TODAY = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 
-const DAILY_QUOTE = {
-  text: "Le succès n'est pas la clé du bonheur. Le bonheur est la clé du succès. Si vous aimez ce que vous faites, vous réussirez.",
-  author: "Albert Schweitzer",
-};
+const DAILY_QUOTES = [
+  { text: "Chaque petit progrès construit une grande réussite.", author: "Proverbe africain" },
+  { text: "La discipline est le pont entre les objectifs et leur accomplissement.", author: "Jim Rohn" },
+  { text: "La meilleure façon de prédire l'avenir est de le créer.", author: "Peter Drucker" },
+  { text: "Un réseau solide se construit par la confiance, la constance et le partage.", author: "Hawtrix" },
+  { text: "N'attendez pas d'être parfait pour commencer ; commencez pour progresser.", author: "Zig Ziglar" },
+];
 
 const VIDEOS = [
   { id: "1", title: "Les 5 habitudes des millionnaires africains", category: "Finance personnelle", duration: "12:34", views: "48K", color: "#F59E0B", icon: "cash" },
@@ -42,6 +45,13 @@ const CATEGORIES_DEV = [
 export default function DevelopmentScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+const now = new Date();
+const dayKey = Math.floor(
+  new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000
+);
+const dailyQuote = DAILY_QUOTES[
+  ((dayKey % DAILY_QUOTES.length) + DAILY_QUOTES.length) % DAILY_QUOTES.length
+];
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
