@@ -50,7 +50,7 @@ export default function Index() {
 
   if (!termsAccepted) return <Redirect href="/welcome" />;
   if (!paymentDone) return <Redirect href="/payment" />;
-  if (!user) return <Redirect href="/register" />;
+  if (!user) return <Redirect href="/welcome" />;
   if (user.isBanned) {
     return <Redirect href="/welcome" />; // Or a specific blocked screen
   }
