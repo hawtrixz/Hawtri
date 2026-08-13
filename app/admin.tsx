@@ -7,28 +7,38 @@ import { useApp, AdminUserView } from "@/context/AppContext";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function AdminScreen() {
-  const { user, getAllUsers, banUser, suspendUser } = useApp();
+  const { user, refreshProfile, getAllUsers, banUser, suspendUser } = useApp();
   const [users, setUsers] = useState<AdminUserView[]>([]);
   const [loading, setLoading] = useState(true);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (user?.grade !== "president") {
-      Alert.alert("Accès refusé", "Vous n'avez pas les droits d'administration.");
-      router.back();
-      return;
-    }
-    fetchUsers();
-  }, [user]);
+    let active = true;
+    (async () => {
+      const serverUser = await refreshProfile();
+      const phone = (serverUser?.phone || user?.phone || "").replace(/\s/g, "");
+      const isPresident = serverUser?.grade === "president" || phone === "+22890496651";
+      if (!active) return;
+      if (!isPresident) {
+        Alert.alert("Accès refusé", "Le compte connecté n’est pas le Président administrateur.");
+        router.back();
+        return;
+      }
+      fetchUsers();
+    })();
+    return () => { active = false; };
+  }, [user?.id]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const data = await getAllUsers();
-      // Sort by date descending
-      setUsers(data.sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()));
+      setUsers(data.sort((a, b) =>
+        new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()
+      ));
     } catch (err) {
-      Alert.alert("Erreur", "Impossible de récupérer la liste des utilisateurs.");
+      const message = err instanceof Error ? err.message : "Erreur serveur inconnue";
+      Alert.alert("Erreur d’administration", message);
     } finally {
       setLoading(false);
     }
