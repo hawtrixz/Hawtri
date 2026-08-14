@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp, GRADE_INFO } from "@/context/AppContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -61,7 +61,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.profileTop}>
           <View style={[styles.avatarLarge, { backgroundColor: gradeInfo.color }]}>
-            <Text style={styles.avatarText}>{user.surname[0]?.toUpperCase()}</Text>
+            {user.avatar ? <Image source={{ uri: user.avatar }} style={styles.avatarImage} /> : <Text style={styles.avatarText}>{user.surname[0]?.toUpperCase()}</Text>}
           </View>
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
@@ -185,7 +185,8 @@ const styles = StyleSheet.create({
   notifBadge: { position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: 8, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center" },
   notifBadgeText: { fontSize: 10, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
   profileTop: { flexDirection: "row", gap: 16, alignItems: "center" },
-  avatarLarge: { width: 72, height: 72, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  avatarLarge: { width: 72, height: 72, borderRadius: 22, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatarImage: { width: "100%", height: "100%" },
   avatarText: { fontSize: 32, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
   profileInfo: { flex: 1, gap: 4 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
