@@ -11,7 +11,8 @@
 
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OPPORTUNITIES, TYPE_META } from "@/data/opportunities";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +20,8 @@ import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import OfflineGate from "@/components/OfflineGate";
 import { isOnline } from "@/utils/network";
+import { backend } from "@/utils/backend";
+import type { Opportunity } from "@/data/opportunities";
 
 export default function OpportunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,10 +29,34 @@ export default function OpportunityDetailScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const opp = OPPORTUNITIES.find(o => o.id === id);
-  if (!opp) return null;
+  const [opp, setOpp] = useState<Opportunity | null>(() => OPPORTUNITIES.find(o => o.id === id) || null);
+  const [loading, setLoading] = useState(true);
 
-  const meta = TYPE_META[opp.type] ?? { icon: "star", color: "#FF6B00" };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const remote = await backend.getOpportunities();
+        const found = remote.find((item: any) => String(item.id) === String(id));
+        if (active && found) {
+          setOpp({
+            id: String(found.id), type: found.type, title: found.title || "Opportunité", org: found.org || "",
+            country: found.country || "", deadline: found.deadline || "", description: found.description || "",
+            requirements: found.requirements || "", url: found.url, applyInfo: found.applyInfo || "Consultez le lien officiel.",
+            image: found.image || "briefcase", color: found.color || "#10B981", edition: found.edition || "Publié par Hawtrix",
+          });
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [id]);
+
+  if (loading && !opp) return <ActivityIndicator size="large" color="#FF6B00" style={{ flex: 1 }} />;
+  if (!opp) return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><Text>Opportunité introuvable.</Text></View>;
+
+  const meta = TYPE_META[opp.type] ?? { icon: "star", color: opp.color || "#FF6B00" };
 
   const handleOpenOfficial = async () => {
     if (!(await isOnline())) {
@@ -168,3 +195,4 @@ const styles = StyleSheet.create({
   applyBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingVertical: 16 },
   applyBtnText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
 });
+
