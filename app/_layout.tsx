@@ -32,6 +32,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="ai" options={{ presentation: "modal" }} />
       <Stack.Screen name="security" />
+      <Stack.Screen name="profile-edit" />
       <Stack.Screen name="unlock" />
       <Stack.Screen name="about" />
       <Stack.Screen name="update" />
