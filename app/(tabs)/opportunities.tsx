@@ -12,7 +12,7 @@ import { useState } from "react";
 import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { OPPORTUNITIES, TYPES, TYPE_META } from "@/data/opportunities";
+import { OPPORTUNITIES, TYPES, TYPE_META, isOpportunityActive } from "@/data/opportunities";
 import OfflineGate from "@/components/OfflineGate";
 
 export default function OpportunitiesScreen() {
@@ -20,13 +20,14 @@ export default function OpportunitiesScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const filtered = activeType === "Tous" ? OPPORTUNITIES : OPPORTUNITIES.filter(o => o.type === activeType);
+  const activeOpportunities = OPPORTUNITIES.filter(o => isOpportunityActive(o));
+  const filtered = activeType === "Tous" ? activeOpportunities : activeOpportunities.filter(o => o.type === activeType);
 
   const body = (
     <View style={{ flex: 1 }}>
       <LinearGradient colors={["#0A1628", "#162035"]} style={styles.header}>
         <Text style={styles.headerTitle}>Opportunités</Text>
-        <Text style={styles.headerSub}>{OPPORTUNITIES.length} offres officielles · Togo & Afrique — liens vérifiés</Text>
+        <Text style={styles.headerSub}>{activeOpportunities.length} offres actuellement ouvertes · Togo & Afrique — liens vérifiés</Text>
         <FlatList
           horizontal
           data={["Tous", ...TYPES]}
