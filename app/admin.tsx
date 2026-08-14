@@ -33,9 +33,8 @@ export default function AdminScreen() {
     setLoading(true);
     try {
       const data = await getAllUsers();
-      setUsers(data.sort((a, b) =>
-        new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()
-      ));
+      // Sort by date descending
+      setUsers(data.sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime()));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erreur serveur inconnue";
       Alert.alert("Erreur d’administration", message);
@@ -114,12 +113,14 @@ export default function AdminScreen() {
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Administration</Text>
-        <TouchableOpacity onPress={fetchUsers} style={{ marginTop: 10 }}>
-  <Text style={{ color: "#FFB26B", fontWeight: "700" }}>
-    Actualiser la liste
-  </Text>
-</TouchableOpacity>
-
+        <Text style={styles.headerSub}>Gestion des membres et lutte contre la fraude</Text>
+          <TouchableOpacity onPress={fetchUsers} style={{ marginTop: 10 }}>
+            <Text style={{ color: "#FFB26B", fontWeight: "700" }}>Actualiser la liste</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/admin-opportunities")} style={styles.opportunityButton}>
+            <Ionicons name="briefcase" size={18} color="#0A1628" />
+            <Text style={styles.opportunityButtonText}>Gérer les opportunités</Text>
+          </TouchableOpacity>
       </LinearGradient>
 
       {loading ? (
@@ -162,4 +163,7 @@ const styles = StyleSheet.create({
   statusText: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
   empty: { marginTop: 100, alignItems: "center" },
   emptyText: { color: "#9CA3AF", fontSize: 16 },
+  opportunityButton: { marginTop: 12, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFD166", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
+  opportunityButtonText: { color: "#0A1628", fontWeight: "800", fontSize: 13 },
 });
+
