@@ -16,47 +16,46 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState(params.category ?? "");
   const [activeFilter, setActiveFilter] = useState(params.category ?? "Tous");
   const [allProviders, setAllProviders] = useState<any[]>([]);
-const [loading, setLoading] = useState(false);
-const [reloadKey, setReloadKey] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   useEffect(() => {
-  useEffect(() => {
-  let cancelled = false;
-  const timer = setTimeout(async () => {
-    setLoading(true);
-    try {
-      const users = await backend.searchUsers(search.trim());
-      if (!cancelled) {
-        setAllProviders(users
-          .filter((u: any) => u.id !== currentUser?.id && !u.is_banned)
-          .map((u: any) => ({
-            id: u.id,
-            name: `${u.surname || ""} ${u.name || ""}`.trim(),
-            profession: u.profession || "Membre Hawtrix",
-            neighborhood: u.neighborhood || "Lomé",
-            city: "Lomé",
-            rating: 5.0,
-            reviews: 0,
-            available: !u.is_suspended,
-            experience: 0,
-            phone: u.phone || "",
-            isRealUser: true,
-          })));
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const users = await backend.searchUsers(search.trim());
+        if (!cancelled) {
+          setAllProviders(users
+            .filter((u: any) => u.id !== currentUser?.id && !u.is_banned)
+            .map((u: any) => ({
+              id: u.id,
+              name: `${u.surname || ""} ${u.name || ""}`.trim(),
+              profession: u.profession || "Membre Hawtrix",
+              neighborhood: u.neighborhood || "Lomé",
+              city: "Lomé",
+              rating: 5.0,
+              reviews: 0,
+              available: !u.is_suspended,
+              experience: 0,
+              phone: u.phone || "",
+              isRealUser: true,
+            })));
+        }
+      } catch {
+        if (!cancelled) setAllProviders([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {
-      if (!cancelled) setAllProviders([]);
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  }, 250);
-  return () => {
-    cancelled = true;
-    clearTimeout(timer);
-  };
-}, [search, currentUser?.id, reloadKey]);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [search, currentUser?.id, reloadKey]);
 
   const filtered = allProviders.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.profession.toLowerCase().includes(search.toLowerCase()) || p.neighborhood.toLowerCase().includes(search.toLowerCase());
