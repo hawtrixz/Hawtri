@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp, GRADE_INFO } from "@/context/AppContext";
-import { OPPORTUNITIES } from "@/data/opportunities";
+import { OPPORTUNITIES, isOpportunityActive } from "@/data/opportunities";
 import { TRAININGS } from "@/data/trainings";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -29,7 +29,7 @@ const QUICK_ACTIONS = [
 ];
 
 // Vraies opportunités officielles (liens et dates vérifiés)
-const SAMPLE_OPPORTUNITIES = OPPORTUNITIES.slice(0, 3);
+const SAMPLE_OPPORTUNITIES = OPPORTUNITIES.filter(o => isOpportunityActive(o)).slice(0, 3);
 
 // Vraies formations officielles avec plateformes réelles
 const SAMPLE_TRAININGS = TRAININGS.slice(0, 3);
@@ -58,7 +58,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} activeOpacity={0.7}>
               <View style={[styles.avatar, { backgroundColor: gradeInfo?.color ?? "#FF6B00" }]}>
-                <Text style={styles.avatarText}>{(user?.surname?.[0] ?? "H").toUpperCase()}</Text>
+                {user?.avatar ? <Image source={{ uri: user.avatar }} style={styles.avatarImage} /> : <Text style={styles.avatarText}>{(user?.surname?.[0] ?? "H").toUpperCase()}</Text>}
               </View>
             </TouchableOpacity>
           </View>
@@ -187,7 +187,8 @@ const styles = StyleSheet.create({
   notifBtn: { position: "relative", width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   notifBadge: { position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: 8, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center" },
   notifBadgeText: { fontSize: 10, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatarImage: { width: "100%", height: "100%" },
   avatarText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
   gradePill: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
   gradeText: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
