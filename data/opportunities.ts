@@ -28,6 +28,29 @@ export interface Opportunity {
   edition: string;
 }
 
+const MONTHS: Record<string, number> = { janvier: 0, février: 1, mars: 2, avril: 3, mai: 4, juin: 5, juillet: 6, août: 7, septembre: 8, octobre: 9, novembre: 10, décembre: 11 };
+
+/** Retourne uniquement les offres encore accessibles à la date du téléphone. */
+export function isOpportunityActive(opportunity: Opportunity, now = new Date()): boolean {
+  const deadline = opportunity.deadline.toLowerCase();
+  if (deadline.includes("offres continues") || deadline.includes("inscription en ligne") || deadline.includes("sessions annuelles")) return true;
+  const years = deadline.match(/20\d{2}/g)?.map(Number) ?? [];
+  const explicitYear = years.length ? years[years.length - 1] : now.getFullYear();
+  const monthNames = Object.keys(MONTHS).filter(month => deadline.includes(month));
+  if (!monthNames.length) return true;
+  const firstMonth = MONTHS[monthNames[0]];
+  const lastMonth = MONTHS[monthNames[monthNames.length - 1]];
+  const dateMatch = deadline.match(/(?:1er|\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/);
+  if (dateMatch) {
+    const day = dateMatch[0].startsWith("1er") ? 1 : Number(dateMatch[0].match(/\d+/)?.[0] ?? 1);
+    return new Date(explicitYear, MONTHS[dateMatch[1]], day, 23, 59, 59).getTime() >= now.getTime();
+  }
+  if (explicitYear < now.getFullYear()) return false;
+  if (explicitYear > now.getFullYear()) return true;
+  if (firstMonth === lastMonth) return firstMonth >= now.getMonth();
+  return now.getMonth() <= lastMonth;
+}
+
 export const OPPORTUNITIES: Opportunity[] = [
   {
     id: "opp-1",
