@@ -4,14 +4,14 @@ import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-const TODAY = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-
 const DAILY_QUOTES = [
+  { text: "Le succès n'est pas la clé du bonheur. Le bonheur est la clé du succès. Si vous aimez ce que vous faites, vous réussirez.", author: "Albert Schweitzer" },
+  { text: "La meilleure façon de prédire l'avenir est de le créer.", author: "Peter Drucker" },
+  { text: "Les grandes réalisations sont toujours précédées par de grandes pensées.", author: "Steve Jobs" },
   { text: "Chaque petit progrès construit une grande réussite.", author: "Proverbe africain" },
   { text: "La discipline est le pont entre les objectifs et leur accomplissement.", author: "Jim Rohn" },
-  { text: "La meilleure façon de prédire l'avenir est de le créer.", author: "Peter Drucker" },
-  { text: "Un réseau solide se construit par la confiance, la constance et le partage.", author: "Hawtrix" },
   { text: "N'attendez pas d'être parfait pour commencer ; commencez pour progresser.", author: "Zig Ziglar" },
+  { text: "Un réseau solide se construit par la confiance, la constance et le partage.", author: "Hawtrix" },
 ];
 
 const VIDEOS = [
@@ -44,14 +44,12 @@ const CATEGORIES_DEV = [
 
 export default function DevelopmentScreen() {
   const insets = useSafeAreaInsets();
+  const now = new Date();
+  const dayKey = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
+  const today = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const dailyQuote = DAILY_QUOTES[((dayKey % DAILY_QUOTES.length) + DAILY_QUOTES.length) % DAILY_QUOTES.length];
+  const dailyTips = TIPS.map((tip, index) => TIPS[(dayKey + index) % TIPS.length]);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-const now = new Date();
-const dayKey = Math.floor(
-  new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000
-);
-const dailyQuote = DAILY_QUOTES[
-  ((dayKey % DAILY_QUOTES.length) + DAILY_QUOTES.length) % DAILY_QUOTES.length
-];
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
@@ -61,7 +59,7 @@ const dailyQuote = DAILY_QUOTES[
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Développement Personnel</Text>
-          <Text style={styles.headerDate}>{TODAY}</Text>
+          <Text style={styles.headerDate}>{today}</Text>
         </View>
         <View style={styles.refreshBadge}>
           <Ionicons name="refresh" size={14} color="#6EE7B7" />
@@ -72,10 +70,10 @@ const dailyQuote = DAILY_QUOTES[
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <LinearGradient colors={["#1F2937", "#111827"]} style={styles.quoteCard}>
           <Ionicons name="chatbubble-ellipses" size={28} color="#FF6B00" />
-          <Text style={styles.quoteText}>{DAILY_QUOTE.text}</Text>
+          <Text style={styles.quoteText}>{dailyQuote.text}</Text>
           <View style={styles.quoteAuthor}>
             <View style={styles.quoteLine} />
-            <Text style={styles.quoteAuthorText}>{DAILY_QUOTE.author}</Text>
+            <Text style={styles.quoteAuthorText}>{dailyQuote.author}</Text>
           </View>
         </LinearGradient>
 
@@ -120,7 +118,7 @@ const dailyQuote = DAILY_QUOTES[
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Conseils du jour</Text>
-          {TIPS.map((t, i) => (
+          {dailyTips.map((t, i) => (
             <View key={i} style={styles.tipCard}>
               <View style={[styles.tipIcon, { backgroundColor: t.color + "20" }]}>
                 <Ionicons name={t.icon as any} size={20} color={t.color} />
