@@ -189,10 +189,15 @@ export const backend = {
 
   /** Liste des conversations */
   async getConversations(): Promise<ServerConversation[]> {
-    const res = await request<{ success: boolean; conversations: ServerConversation[] }>(
-      "GET", "/chat/conversations",
-    );
-    return res.conversations;
+    const res = await request<{ success: boolean; conversations: any[] }>("GET", "/chat/conversations");
+    return res.conversations.map((c: any) => ({
+      id: c.id,
+      participantId: c.participantId ?? c.participant_id,
+      participantName: c.participantName ?? c.participant_name ?? "Utilisateur",
+      lastMessage: c.lastMessage ?? c.last_message ?? "",
+      lastTimestamp: c.lastTimestamp ?? c.last_timestamp ?? new Date().toISOString(),
+      unread: Number(c.unread ?? 0),
+    }));
   },
 
   /** Recherche de contacts */
@@ -214,10 +219,16 @@ export const backend = {
 
   /** Messages d'une conversation */
   async getMessages(conversationId: string): Promise<ServerMessage[]> {
-    const res = await request<{ success: boolean; messages: ServerMessage[] }>(
-      "GET", `/chat/conversations/${conversationId}`,
-    );
-    return res.messages;
+    const res = await request<{ success: boolean; messages: any[] }>("GET", `/chat/conversations/${conversationId}`);
+    return res.messages.map((m: any) => ({
+      id: m.id,
+      senderId: m.senderId ?? m.sender_id,
+      name: m.name,
+      surname: m.surname,
+      text: m.text,
+      timestamp: m.timestamp ?? m.created_at,
+      read: Boolean(m.read),
+    }));
   },
 
   /** Envoyer un message */
@@ -258,6 +269,32 @@ export const backend = {
     return res.withdrawals;
   },
 
+  /* =================== Opportunités =================== */
+
+  async getOpportunities() {
+    const res = await request<{ success: boolean; opportunities: any[] }>("GET", "/opportunities");
+    return res.opportunities;
+  },
+
+  async adminGetOpportunities() {
+    const res = await request<{ success: boolean; opportunities: any[] }>("GET", "/admin/opportunities");
+    return res.opportunities;
+  },
+
+  async adminCreateOpportunity(data: Record<string, unknown>) {
+    const res = await request<{ success: boolean; opportunity: any }>("POST", "/admin/opportunities", data);
+    return res.opportunity;
+  },
+
+  async adminUpdateOpportunity(id: string, data: Record<string, unknown>) {
+    const res = await request<{ success: boolean; opportunity: any }>("PATCH", `/admin/opportunities/${id}`, data);
+    return res.opportunity;
+  },
+
+  async adminDisableOpportunity(id: string) {
+    return request("DELETE", `/admin/opportunities/${id}`);
+  },
+
   /* =================== Admin =================== */
 
   async adminGetUsers() {
@@ -282,3 +319,4 @@ export const backend = {
     await setToken(null);
   },
 };
+
