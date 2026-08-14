@@ -1,5 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { backend } from "@/utils/backend";
 
 export type Grade =
@@ -108,13 +108,14 @@ interface AppContextType {
   createUser: (data: Omit<User, "id" | "referralCode" | "grade" | "joinedAt" | "totalEarnings" | "networkCount" | "branches" | "tutorialSeen" | "balance"> & { password: string }) => Promise<void>;
   loginUser: (phone: string, password: string) => Promise<void>;
   refreshProfile: () => Promise<User | null>;
+  refreshAll: () => Promise<User | null>;
   updateUser: (data: Partial<User>) => Promise<void>;
   markTutorialSeen: () => Promise<void>;
   addNotification: (n: Omit<Notification, "id" | "timestamp" | "read">) => void;
   markNotificationRead: (id: string) => void;
-  sendMessage: (conversationId: string, text: string) => void;
-  getOrCreateConversation: (participantId: string, participantName: string) => string;
-  markConversationRead: (id: string) => void;
+  sendMessage: (conversationId: string, text: string) => Promise<void>;
+  getOrCreateConversation: (participantId: string, participantName: string) => Promise<string>;
+  markConversationRead: (id: string) => Promise<void>;
   logout: () => Promise<void>;
   isSpecialPhone: (phone: string) => boolean;
   withdraw: (amount: number, code: string) => Promise<{ success: boolean; message: string }>;
@@ -130,15 +131,14 @@ function generateCode(): string {
   const digits = "23456789";
   const all = letters + digits;
 
-  // Generate 4 random chars, then insert 1 guaranteed digit at a random position
-  const arr: string[] = [];
-  for (let i = 0; i < 4; i++) {
-    arr.push(all[Math.floor(Math.random() * all.length)]);
-  }
-  const digitPos = Math.floor(Math.random() * 5);
-  arr.splice(digitPos, 0, digits[Math.floor(Math.random() * digits.length)]);
-
-  return arr.join(""); // 5 chars, e.g. "HK3MZ", "B7ACF"
+  const arr: string[] = [
+    letters[Math.floor(Math.random() * letters.length)],
+    letters[Math.floor(Math.random() * letters.length)],
+    letters[Math.floor(Math.random() * letters.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+  ];
+  return arr.sort(() => Math.random() - 0.5).join(""); // exactement 5 caractères : 3 lettres et 2 chiffres
 }
 
 // Comptes spéciaux pré-créés
@@ -213,7 +213,7 @@ export const GRADE_INFO: Record<Grade, { label: string; color: string; minCount:
   directeur:  { label: "Directeur",          color: "#FF6B00", minCount: 10000,    dividendPct: 6,   cardLevel: 7 },
   directeur2: { label: "Directeur ⭐⭐",     color: "#E8B800", minCount: 100000,   dividendPct: 14,  cardLevel: 8 },
   directeur5: { label: "Directeur ⭐⭐⭐⭐⭐", color: "#C0A020", minCount: 1000000, dividendPct: 30,  cardLevel: 9 },
-  president:  { label: "Président Fondateur",color: "#FFD700", minCount: 99999999999,  dividendPct: 40,  cardLevel: 10 },
+  president:  { label: "Président Fondateur",color: "#FFD700", minCount: 9999999,  dividendPct: 40,  cardLevel: 10 },
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -239,27 +239,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (termsRaw) setTermsAcceptedState(JSON.parse(termsRaw));
       if (paymentRaw) setPaymentDoneState(JSON.parse(paymentRaw));
-      if (userRaw) setUser(JSON.parse(userRaw));
-      if (convsRaw) setConversations(JSON.parse(convsRaw));
+      if (userRaw) {
+        setUser(JSON.parse(userRaw));
+        try {
+          const remoteConversations = await backend.getConversations();
+          const normalized = remoteConversations.map((c: any) => ({
+            id: c.id,
+            participantId: c.participantId,
+            participantName: c.participantName,
+            lastMessage: c.lastMessage || "",
+            lastTimestamp: c.lastTimestamp || new Date().toISOString(),
+            unread: Number(c.unread || 0),
+            messages: [],
+          }));
+          if (normalized.length > 0) {
+            setConversations(normalized);
+            await AsyncStorage.setItem("hawtrix_conversations", JSON.stringify(normalized));
+          } else if (convsRaw) {
+            setConversations(JSON.parse(convsRaw));
+          }
+        } catch {
+          if (convsRaw) setConversations(JSON.parse(convsRaw));
+        }
+      } else {
+        // Après une réinstallation ou un changement de téléphone, le profil local
+        // peut avoir disparu. Le serveur reste la source de vérité : si un jeton
+        // persistant existe, restaurer le compte avant d'afficher l'inscription.
+        try {
+          const remoteUser = await backend.getMe();
+          setUser(remoteUser as unknown as User);
+          await AsyncStorage.setItem("hawtrix_user", JSON.stringify(remoteUser));
+        } catch {
+          // Aucun jeton valide : l'écran d'accueil proposera connexion ou inscription.
+        }
+        if (convsRaw) setConversations(JSON.parse(convsRaw));
+      }
       if (notifsRaw) setNotifications(JSON.parse(notifsRaw));
-      } finally {
-    setIsLoading(false);
-  }
-};
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-const refreshProfile = useCallback(async (): Promise<User | null> => {
-  try {
-    const remoteUser = await backend.getMe();
-    const nextUser = remoteUser as unknown as User;
-    setUser(nextUser);
-    await AsyncStorage.setItem("hawtrix_user", JSON.stringify(nextUser));
-    return nextUser;
-  } catch {
-    return null;
-  }
-}, []);
-
-const isSpecialPhone = useCallback((phone: string): boolean => {
+  const isSpecialPhone = useCallback((phone: string): boolean => {
     const clean = phone.replace(/\s/g, "");
     return clean in SPECIAL_ACCOUNTS;
   }, []);
@@ -297,6 +318,54 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
     return;
   }, [setPaymentDone, setTermsAccepted]);
 
+  const refreshProfile = useCallback(async (): Promise<User | null> => {
+    try {
+      const remoteUser = await backend.getMe();
+      const nextUser = remoteUser as unknown as User;
+      setUser(nextUser);
+      await AsyncStorage.setItem("hawtrix_user", JSON.stringify(nextUser));
+      return nextUser;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const refreshAll = useCallback(async (): Promise<User | null> => {
+    const nextUser = await refreshProfile();
+    try {
+      const remoteConversations = await backend.getConversations();
+      const normalized = remoteConversations.map((c: any) => ({
+        id: c.id,
+        participantId: c.participantId,
+        participantName: c.participantName,
+        lastMessage: c.lastMessage || "",
+        lastTimestamp: c.lastTimestamp || new Date().toISOString(),
+        unread: Number(c.unread || 0),
+        messages: [],
+      }));
+      setConversations(normalized);
+      await AsyncStorage.setItem("hawtrix_conversations", JSON.stringify(normalized));
+    } catch {
+      // Conserver les conversations locales si le réseau est indisponible.
+    }
+    try {
+      const remoteNotifications = await backend.getNotifications();
+      const normalized = remoteNotifications.map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        type: n.type,
+        timestamp: n.created_at || n.timestamp || new Date().toISOString(),
+        read: Boolean(n.read),
+      }));
+      setNotifications(normalized);
+      await AsyncStorage.setItem("hawtrix_notifications", JSON.stringify(normalized));
+    } catch {
+      // Conserver les notifications locales si le réseau est indisponible.
+    }
+    return nextUser;
+  }, [refreshProfile]);
+
   const loginUser = useCallback(async (phone: string, password: string) => {
     const remote = await backend.login(phone.replace(/\s/g, ""), password);
     const remoteUser = remote.user as unknown as User;
@@ -307,29 +376,22 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
   }, [setPaymentDone, setTermsAccepted]);
 
   const updateUser = useCallback(async (data: Partial<User>) => {
-    setUser(prev => {
-      if (!prev) return prev;
-      const updated = { ...prev, ...data };
-      if (updated.phone && !SPECIAL_ACCOUNTS[updated.phone.replace(/\s/g, "")]) {
-        updated.grade = calculateGrade(updated.networkCount, updated.branches);
-      }
-      AsyncStorage.setItem("hawtrix_user", JSON.stringify(updated));
-      
-      // Update in global list too
-      AsyncStorage.getItem("hawtrix_all_users").then(raw => {
-        if (raw) {
-          const all = JSON.parse(raw) as User[];
-          const idx = all.findIndex(u => u.id === updated.id);
-          if (idx !== -1) {
-            all[idx] = updated;
-            AsyncStorage.setItem("hawtrix_all_users", JSON.stringify(all));
-          }
-        }
-      });
+    if (!user) throw new Error("Utilisateur non connecté");
 
-      return updated;
-    });
-  }, []);
+    // Le serveur reste la source de vérité. On n'envoie jamais les champs
+    // sensibles ou calculés depuis le téléphone.
+    const editable: Record<string, unknown> = {};
+    for (const key of ["name", "surname", "profession", "neighborhood", "avatar", "bio", "skills"] as const) {
+      if (data[key] !== undefined) editable[key] = data[key];
+    }
+
+    const remoteUser = Object.keys(editable).length > 0
+      ? await backend.updateProfile(editable)
+      : null;
+    const updated = { ...user, ...(remoteUser ?? data) } as User;
+    setUser(updated);
+    await AsyncStorage.setItem("hawtrix_user", JSON.stringify(updated));
+  }, [user]);
 
   const markTutorialSeen = useCallback(async () => {
     await updateUser({ tutorialSeen: true });
@@ -357,47 +419,61 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
     });
   }, []);
 
-  const getOrCreateConversation = useCallback((participantId: string, participantName: string): string => {
-    const existing = conversations.find(c => c.participantId === participantId);
-    if (existing) return existing.id;
-    const newConv: Conversation = {
-      id: Date.now().toString(),
-      participantId,
-      participantName,
-      lastMessage: "",
-      lastTimestamp: new Date().toISOString(),
-      unread: 0,
+  const getOrCreateConversation = useCallback(async (participantId: string, participantName: string): Promise<string> => {
+    const remote = await backend.openConversation(participantId);
+    const serverConv = remote as any;
+    const local: Conversation = {
+      id: serverConv.id,
+      participantId: serverConv.participantId ?? participantId,
+      participantName: serverConv.participantName ?? participantName,
+      lastMessage: serverConv.lastMessage ?? "",
+      lastTimestamp: serverConv.lastTimestamp ?? new Date().toISOString(),
+      unread: Number(serverConv.unread ?? 0),
       messages: [],
     };
     setConversations(prev => {
-      const updated = [newConv, ...prev];
+      const updated = [local, ...prev.filter(c => c.id !== local.id)];
       AsyncStorage.setItem("hawtrix_conversations", JSON.stringify(updated));
       return updated;
     });
-    return newConv.id;
-  }, [conversations]);
+    return local.id;
+  }, []);
 
-  const sendMessage = useCallback((conversationId: string, text: string) => {
+  const sendMessage = useCallback(async (conversationId: string, text: string): Promise<void> => {
+    const serverMsg = await backend.sendMessage(conversationId, text);
     const msg: Message = {
-      id: Date.now().toString(),
-      senderId: user?.id ?? "me",
-      text,
-      timestamp: new Date().toISOString(),
-      read: false,
+      id: serverMsg.id,
+      senderId: serverMsg.senderId,
+      text: serverMsg.text,
+      timestamp: serverMsg.timestamp,
+      read: Boolean(serverMsg.read),
     };
     setConversations(prev => {
-      const updated = prev.map(c => {
-        if (c.id !== conversationId) return c;
-        return { ...c, lastMessage: text, lastTimestamp: msg.timestamp, messages: [...c.messages, msg] };
-      });
+      const updated = prev.map(c => c.id === conversationId
+        ? { ...c, lastMessage: msg.text, lastTimestamp: msg.timestamp, messages: [...c.messages, msg] }
+        : c);
       AsyncStorage.setItem("hawtrix_conversations", JSON.stringify(updated));
       return updated;
     });
-  }, [user]);
+  }, []);
 
-  const markConversationRead = useCallback((id: string) => {
+  const markConversationRead = useCallback(async (id: string): Promise<void> => {
+    const serverMessages = await backend.getMessages(id);
+    const messages: Message[] = serverMessages.map(m => ({
+      id: m.id,
+      senderId: m.senderId,
+      text: m.text,
+      timestamp: m.timestamp,
+      read: true,
+    }));
     setConversations(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, unread: 0, messages: c.messages.map(m => ({ ...m, read: true })) } : c);
+      const updated = prev.map(c => c.id === id ? {
+        ...c,
+        unread: 0,
+        messages,
+        lastMessage: messages.at(-1)?.text ?? c.lastMessage,
+        lastTimestamp: messages.at(-1)?.timestamp ?? c.lastTimestamp,
+      } : c);
       AsyncStorage.setItem("hawtrix_conversations", JSON.stringify(updated));
       return updated;
     });
@@ -427,18 +503,16 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
   };
 
   const getAllUsers = useCallback(async (): Promise<AdminUserView[]> => {
-    const raw = await AsyncStorage.getItem("hawtrix_all_users");
-    if (!raw) return [];
-    const users: User[] = JSON.parse(raw);
-    return users.map(u => ({
+    const users = await backend.adminGetUsers();
+    return users.map((u: any) => ({
       id: u.id,
       name: u.name,
       surname: u.surname,
       phone: u.phone,
-      joinedAt: u.joinedAt,
-      referrerId: u.referrerId,
-      isBanned: !!u.isBanned,
-      isSuspended: !!u.isSuspended,
+      joinedAt: u.created_at ?? u.joinedAt,
+      referrerId: u.referrer_id ?? u.referrerId ?? null,
+      isBanned: !!(u.is_banned ?? u.isBanned),
+      isSuspended: !!(u.is_suspended ?? u.isSuspended),
       profession: u.profession ?? undefined,
       neighborhood: u.neighborhood ?? undefined,
     }));
@@ -466,72 +540,17 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
   }, [user, updateUser, addNotification]);
 
   const banUser = useCallback(async (userId: string) => {
-    const raw = await AsyncStorage.getItem("hawtrix_all_users");
-    if (!raw) return;
-    let users: User[] = JSON.parse(raw);
-    const targetUser = users.find(u => u.id === userId);
-    if (!targetUser || targetUser.isBanned) return;
-
-    // Marquer comme banni
-    users = users.map(u => u.id === userId ? { ...u, isBanned: true } : u);
-    
-    // Annulation des gains (Algorithme inverse)
-    let remainingToCancel = 2000;
-    
-    // 1. Annulation Président (p0 = 750f)
-    const president = users.find(u => u.grade === "president");
-    if (president) {
-      president.balance -= 750;
-      president.totalEarnings -= 750;
-      remainingToCancel -= 750;
-    }
-
-    // 2. Annulation Réseau
-    let currentReferrerId = targetUser.referrerId;
-    let currentLevelPayment = 500;
-    while (currentReferrerId && remainingToCancel > 0) {
-      const referrer = users.find(u => u.referralCode === currentReferrerId);
-      if (referrer) {
-        const amountToCancel = Math.min(currentLevelPayment, remainingToCancel);
-        referrer.balance -= amountToCancel;
-        referrer.totalEarnings -= amountToCancel;
-        referrer.networkCount = Math.max(0, (referrer.networkCount || 0) - 1);
-        
-        remainingToCancel -= amountToCancel;
-        currentLevelPayment = Math.floor(amountToCancel / 3);
-        currentReferrerId = referrer.referrerId;
-        if (currentLevelPayment <= 0) break;
-      } else {
-        break;
-      }
-    }
-
-    // 3. Annulation reliquat Président
-    if (remainingToCancel > 0 && president) {
-      president.balance -= remainingToCancel;
-      president.totalEarnings -= remainingToCancel;
-    }
-
-    await AsyncStorage.setItem("hawtrix_all_users", JSON.stringify(users));
-    
-    if (user?.id === userId) {
-      setUser({ ...user, isBanned: true });
-    }
+    await backend.adminBanUser(userId, true);
+    if (user?.id === userId) setUser({ ...user, isBanned: true });
   }, [user]);
 
   const suspendUser = useCallback(async (userId: string, status: boolean) => {
-    const raw = await AsyncStorage.getItem("hawtrix_all_users");
-    if (!raw) return;
-    let users: User[] = JSON.parse(raw);
-    users = users.map(u => u.id === userId ? { ...u, isSuspended: status } : u);
-    await AsyncStorage.setItem("hawtrix_all_users", JSON.stringify(users));
-    
-    if (user?.id === userId) {
-      setUser({ ...user, isSuspended: status });
-    }
+    await backend.adminSuspendUser(userId, status);
+    if (user?.id === userId) setUser({ ...user, isSuspended: status });
   }, [user]);
 
   const logout = useCallback(async () => {
+    await backend.logout();
     // Le mot de passe 2FA (hawtrix_pass_hash / hawtrix_pass_set) n'est PAS
     // effacé : il appartient au compte, pas à la session. Seul l'appareil
     // actuel est dé-sécurisé (hawtrix_pass_hash_device_<id>) au logout.
@@ -547,8 +566,7 @@ const isSpecialPhone = useCallback((phone: string): boolean => {
   return (
     <AppContext.Provider value={{
       user, termsAccepted, paymentDone, conversations, notifications, isLoading,
-      setTermsAccepted, setPaymentDone, createUser, loginUser, refreshProfile, updateUser, markTutorialSeen,
-      addNotification, markNotificationRead, sendMessage, getOrCreateConversation,
+      setTermsAccepted, setPaymentDone, createUser,       loginUser, refreshProfile, refreshAll, updateUser, markTutorialSeen, addNotification, markNotificationRead, sendMessage, getOrCreateConversation,
       markConversationRead, logout, isSpecialPhone,
       withdraw, banUser, suspendUser, getAllUsers,
     }}>
