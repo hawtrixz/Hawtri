@@ -1,52 +1,46 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import * as Linking from "expo-linking";
-import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { getAppVersion } from "@/utils/version";
+import { getAppVersion, checkUpdateAvailable } from "@/utils/version";
 
 export default function UpdateScreen() {
-  const params = useLocalSearchParams<{ apkUrl?: string }>();
-  const apkUrl = params.apkUrl ?? "https://hawtrix.tg/hawtrix.apk";
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const handleDownload = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (Platform.OS === "web") {
-      Linking.openURL(apkUrl);
-    } else {
-      // Téléchargement direct du fichier APK dans l'appareil
-      Linking.openURL(apkUrl);
-    }
+  const handleContinue = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.replace("/(tabs)/home");
   };
 
-  const handleRetry = async () => {
+  const handleCheck = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Re-vérifie la version : si elle est à jour, on débloque l'app.
-    const { checkUpdateRequired } = await import("@/utils/version");
-    const { required } = await checkUpdateRequired();
-    if (!required) {
-      router.replace("/(tabs)/home");
+    const update = await checkUpdateAvailable();
+    if (update.available) {
+      Alert.alert(
+        "Mise à jour disponible",
+        `La version ${update.latestVersion} est disponible. Consulte le canal officiel de Hawtrix pour obtenir les instructions d'installation.`,
+      );
     } else {
-      Alert.alert("Mise à jour requise", "Une nouvelle version de Hawtrix est disponible. Téléchargez-la pour continuer à utiliser l'application.");
+      Alert.alert("Application à jour", "Aucune nouvelle version n'est signalée pour le moment.");
     }
   };
 
   return (
     <LinearGradient colors={["#0A1628", "#162035", "#0A1628"]} style={[styles.container, { paddingTop: topPad }]}>
+
       <View style={styles.inner}>
         <View style={styles.iconWrap}>
           <LinearGradient colors={["#FF6B00", "#E55A00"]} style={styles.iconGrad}>
-            <Ionicons name="refresh" size={44} color="#FFFFFF" />
+            <Ionicons name="information" size={44} color="#FFFFFF" />
           </LinearGradient>
         </View>
 
-        <Text style={styles.title}>Mise à jour requise</Text>
+        <Text style={styles.title}>Nouvelle version disponible</Text>
         <Text style={styles.subtitle}>
-          Une nouvelle version de Hawtrix est disponible. Pour votre sécurité et pour accéder à toutes les fonctionnalités, mettez à jour votre application.
+          Une nouvelle mise à jour de Hawtrix peut être disponible. Tu peux continuer à utiliser cette version sans blocage.
         </Text>
 
         <View style={styles.versionCard}>
@@ -56,31 +50,27 @@ export default function UpdateScreen() {
           </View>
           <View style={styles.versionDivider} />
           <View style={styles.versionRow}>
-            <Text style={styles.versionLabel}>Dernière version</Text>
-            <Text style={[styles.versionValue, { color: "#10B981" }]}>Disponible</Text>
+            <Text style={styles.versionLabel}>Politique</Text>
+            <Text style={[styles.versionValue, { color: "#10B981" }]}>Mise à jour facultative</Text>
           </View>
         </View>
 
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle" size={20} color="#3B82F6" />
+          <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
           <Text style={styles.infoText}>
-            Les versions précédentes ne fonctionnent plus. Le fichier APK de la nouvelle version se télécharge directement depuis ce bouton.
+            Hawtrix ne bloque pas les anciennes versions et ne télécharge pas de fichier APK directement depuis l'application. Utilise uniquement le canal officiel communiqué par l'équipe.
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.downloadBtn} onPress={handleDownload} activeOpacity={0.85}>
-          <Ionicons name="download" size={22} color="#FFFFFF" />
-          <Text style={styles.downloadBtnText}>Télécharger la nouvelle version</Text>
+        <TouchableOpacity style={styles.continueBtn} onPress={handleContinue} activeOpacity={0.85}>
+          <Ionicons name="arrow-forward" size={22} color="#FFFFFF" />
+          <Text style={styles.continueBtnText}>Continuer dans Hawtrix</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.retryBtn} onPress={handleRetry} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.checkBtn} onPress={handleCheck} activeOpacity={0.8}>
           <Ionicons name="refresh" size={16} color="#FFB578" />
-          <Text style={styles.retryBtnText}>J'ai mis à jour, vérifier</Text>
+          <Text style={styles.checkBtnText}>Vérifier à nouveau</Text>
         </TouchableOpacity>
-
-        <Text style={styles.hint}>
-          Après le téléchargement, ouvrez le fichier APK puis installez-le. Autorisez l'installation depuis les sources inconnues si demandé.
-        </Text>
       </View>
     </LinearGradient>
   );
@@ -100,9 +90,8 @@ const styles = StyleSheet.create({
   versionDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginVertical: 8 },
   infoCard: { width: "100%", flexDirection: "row", gap: 12, backgroundColor: "rgba(59,130,246,0.1)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "rgba(59,130,246,0.25)" },
   infoText: { flex: 1, fontSize: 13, color: "#BFDBFE", fontFamily: "Inter_400Regular", lineHeight: 19 },
-  downloadBtn: { width: "100%", flexDirection: "row", backgroundColor: "#FF6B00", borderRadius: 16, paddingVertical: 17, alignItems: "center", justifyContent: "center", gap: 10 },
-  downloadBtnText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  retryBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
-  retryBtnText: { fontSize: 14, color: "#FFB578", fontFamily: "Inter_600SemiBold" },
-  hint: { fontSize: 11.5, color: "#64748B", fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 17, maxWidth: 320 },
+  continueBtn: { width: "100%", flexDirection: "row", backgroundColor: "#FF6B00", borderRadius: 16, paddingVertical: 17, alignItems: "center", justifyContent: "center", gap: 10 },
+  continueBtnText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+  checkBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
+  checkBtnText: { fontSize: 14, color: "#FFB578", fontFamily: "Inter_600SemiBold" },
 });
