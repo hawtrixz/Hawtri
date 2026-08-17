@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/context/AppContext";
@@ -23,11 +23,35 @@ export default function ChatScreen() {
   const conv = conversations.find(c => c.id === id);
   const messages = conv?.messages ?? [];
 
-  const handleSend = () => {
+  // Rafraîchir les messages reçus depuis le serveur toutes les 3 secondes et
+  // marquer la conversation comme lue, y compris après chaque envoi.
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      while (active) {
+        try {
+          await markConversationRead(id ?? "");
+        } catch {
+          // Le serveur est temporairement injoignable : on retentera au prochain cycle.
+        }
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    };
+    poll();
+    return () => { active = false; };
+  }, [id, markConversationRead]);
+
+  const handleSend = async () => {
     if (!input.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     sendMessage(id ?? "", input.trim());
     setInput("");
+    // Recharger immédiatement les messages du serveur après l'envoi.
+    try {
+      await markConversationRead(id ?? "");
+    } catch {
+      // Ignorer : le polling reprendra au prochain cycle.
+    }
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
