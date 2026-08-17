@@ -1,9 +1,9 @@
 // utils/version.ts
 //
-// Hawtrix 2.87 — contrôle de version & mise à jour forcée de l'APK
+// Hawtrix 2.89.3 — contrôle de version & mise à jour forcée de l'APK
 // ---------------------------------------------------------------
 // - À chaque lancement, l'app interroge https://hawtrix.tg/version.json
-//   qui retourne { minVersion: "2.87.0", apkUrl: "https://hawtrix.tg/hawtrix.apk" }.
+//   qui retourne { minVersion: "2.89.3", apkUrl: "https://hawtrix.tg/hawtrix.apk" }.
 // - Si la version installée est inférieure à minVersion, l'app est
 //   bloquée et redirigée vers /update pour télécharger la nouvelle APK
 //   directement depuis l'application. Les anciennes APK cessent ainsi
@@ -14,7 +14,6 @@
 // Déploiement: le fichier version.json et l'APK doivent être déposés sur
 // le serveur https://hawtrix.tg (le workflow GitHub Actions .github/
 // workflows/build-apk.yml peut être étendu pour le faire automatiquement).
-
 import Constants from "expo-constants";
 import { isOnline } from "@/utils/network";
 
@@ -38,7 +37,7 @@ export function compareVersions(a: string, b: string): -1 | 0 | 1 {
 }
 
 export function getAppVersion(): string {
-  return Constants?.expoConfig?.version ?? "2.87.0";
+  return Constants?.expoConfig?.version ?? "2.89.3";
 }
 
 export async function fetchVersionInfo(): Promise<VersionInfo | null> {
