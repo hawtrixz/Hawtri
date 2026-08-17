@@ -17,9 +17,9 @@ export default function ProviderDetailScreen() {
   const reviews = parseInt(params.reviews ?? "0");
   const isAvailable = params.available === "true";
 
-  const handleMessage = () => {
+  const handleMessage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const convId = getOrCreateConversation(params.id ?? "", params.name ?? "Prestataire");
+    const convId = await getOrCreateConversation(params.id ?? "", params.name ?? "Prestataire");
     router.push({ pathname: "/messages/[id]", params: { id: convId, name: params.name } });
   };
 
