@@ -1,78 +1,99 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeIn, FadeInDown, FadeInUp } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useColors } from "@/hooks/useColors";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function WelcomeScreen() {
-  const colors = useColors();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const [ready, setReady] = useState(false);
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const botPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setReady(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]).start();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [fadeAnim, slideAnim]);
+
+  const handlePrimary = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/register");
+  };
+
+  const handleSecondary = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/login");
+  };
 
   return (
-    <LinearGradient colors={["#0A1628", "#162035", "#0A1628"]} style={styles.container}>
-      <View style={[styles.inner, { paddingTop: topPad + 20, paddingBottom: botPad + 20 }]}>
-        <Animated.View entering={FadeInDown.delay(200).duration(800)} style={styles.logoWrap}>
-          <Image source={require("@/assets/images/icon.png")} style={styles.logo} resizeMode="contain" />
-        </Animated.View>
+    <LinearGradient colors={["#0A1628", "#101F38", "#0A1628"]} style={[styles.container, { paddingTop: topPad }]}>
+      <Animated.View style={[styles.inner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <View style={styles.logoWrap}>
+          <LinearGradient colors={["#FF6B00", "#E55A00"]} style={styles.logoGrad}>
+            <Ionicons name="briefcase" size={56} color="#FFFFFF" />
+          </LinearGradient>
+        </View>
+        <Text style={styles.title}>Hawtrix</Text>
+        <Text style={styles.subtitle}>La plateforme des professionnels africains</Text>
+        <Text style={styles.description}>
+          Rejoignez un réseau de professionnels, développez vos compétences,
+          partagez des opportunités et recevez des récompenses.
+        </Text>
 
-        <Animated.View entering={FadeIn.delay(600).duration(800)} style={styles.taglineWrap}>
-          <Text style={styles.tagline}>Trouvez. Connectez.</Text>
-          <Text style={[styles.tagline, { color: "#FF6B00" }]}>Réussissez.</Text>
-          <Text style={styles.description}>
-            La plateforme tout-en-un pour les professionnels africains. Annuaire, formations, opportunités et réseau dans une seule application.
-          </Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(900).duration(700)} style={styles.featuresRow}>
+        <View style={styles.statsRow}>
           {[
-            { icon: "🔧", label: "Prestataires" },
-            { icon: "📚", label: "Formations" },
-            { icon: "💼", label: "Opportunités" },
-            { icon: "🌐", label: "Réseau" },
-          ].map((f) => (
-            <View key={f.label} style={styles.featureItem}>
-              <View style={styles.featureIcon}>
-                <Text style={styles.featureEmoji}>{f.icon}</Text>
-              </View>
-              <Text style={styles.featureLabel}>{f.label}</Text>
+            { label: "Membres actifs", value: "12,482", icon: "people" },
+            { label: "Opportunités", value: "3,291", icon: "trending-up" },
+            { label: "Pays", value: "18", icon: "globe" },
+          ].map((s, i) => (
+            <View key={i} style={styles.stat}>
+              <Ionicons name={s.icon as any} size={22} color="#FF6B00" />
+              <Text style={styles.statValue}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInUp.delay(1100).duration(700)} style={styles.btnArea}>
-          <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push("/terms")} activeOpacity={0.85}>
-            <Text style={styles.btnPrimaryText}>Créer un compte</Text>
+        <View style={styles.buttons}>
+          <TouchableOpacity style={styles.btnPrimary} onPress={handlePrimary} activeOpacity={0.85}>
+            <Text style={styles.btnPrimaryText}>Commencer</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.btnSecondary} onPress={() => router.push("/login")} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.btnSecondary} onPress={handleSecondary} activeOpacity={0.85}>
             <Text style={styles.btnSecondaryText}>Se connecter</Text>
           </TouchableOpacity>
-          <Text style={styles.version}>Hawtrix v2.87.0 · Togo</Text>
-        </Animated.View>
-      </View>
+          <Text style={styles.version}>Hawtrix v2.89.3 · Togo</Text>
+        </View>
+      </Animated.View>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  inner: { flex: 1, alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24 },
-  logoWrap: { alignItems: "center", marginTop: 20 },
-  logo: { width: 160, height: 160, borderRadius: 32 },
-  taglineWrap: { alignItems: "center", gap: 4 },
-  tagline: { fontSize: 32, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5, fontFamily: "Inter_700Bold" },
-  description: { fontSize: 15, color: "#94A3B8", textAlign: "center", lineHeight: 22, marginTop: 16, fontFamily: "Inter_400Regular" },
-  featuresRow: { flexDirection: "row", gap: 20, justifyContent: "center" },
-  featureItem: { alignItems: "center", gap: 8 },
-  featureIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: "rgba(255,107,0,0.15)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,107,0,0.3)" },
-  featureEmoji: { fontSize: 22 },
-  featureLabel: { fontSize: 11, color: "#94A3B8", fontFamily: "Inter_500Medium" },
-  btnArea: { width: "100%", alignItems: "center", gap: 12 },
-  btnPrimary: { width: "100%", backgroundColor: "#FF6B00", borderRadius: 16, paddingVertical: 18, alignItems: "center" },
-  btnPrimaryText: { fontSize: 17, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  btnSecondary: { width: "100%", borderRadius: 16, paddingVertical: 16, alignItems: "center", borderWidth: 1.5, borderColor: "#64748B" },
-  btnSecondaryText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  version: { fontSize: 12, color: "#475569", fontFamily: "Inter_400Regular" },
+  inner: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
+  logoWrap: { marginBottom: 28 },
+  logoGrad: { width: 104, height: 104, borderRadius: 32, alignItems: "center", justifyContent: "center", shadowColor: "#FF6B00", shadowOpacity: 0.4, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
+  title: { fontSize: 44, fontWeight: "800", color: "#FFFFFF", fontFamily: "Inter_800ExtraBold", letterSpacing: 1 },
+  subtitle: { fontSize: 17, fontWeight: "600", color: "#FFD9B3", fontFamily: "Inter_600SemiBold", marginTop: 8, textAlign: "center" },
+  description: { fontSize: 14, color: "#B9C4D6", fontFamily: "Inter_400Regular", lineHeight: 22, textAlign: "center", marginTop: 18 },
+  statsRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginTop: 40, marginBottom: 44, paddingHorizontal: 4 },
+  stat: { flex: 1, alignItems: "center", gap: 4, paddingHorizontal: 4 },
+  statValue: { fontSize: 19, fontWeight: "800", color: "#FFFFFF", fontFamily: "Inter_800ExtraBold" },
+  statLabel: { fontSize: 11, color: "#94A3B8", fontFamily: "Inter_400Regular" },
+  buttons: { width: "100%", gap: 14 },
+  btnPrimary: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#FF6B00", borderRadius: 16, paddingVertical: 18, shadowColor: "#FF6B00", shadowOpacity: 0.3, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  btnPrimaryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 16, fontFamily: "Inter_800ExtraBold" },
+  btnSecondary: { alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)", borderRadius: 16, paddingVertical: 17 },
+  btnSecondaryText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15, fontFamily: "Inter_700Bold" },
+  version: { textAlign: "center", fontSize: 12, color: "#64748B", fontFamily: "Inter_400Regular", marginTop: 12 },
 });
