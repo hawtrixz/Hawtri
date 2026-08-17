@@ -1,34 +1,46 @@
 import { Redirect } from "expo-router";
 import { useApp } from "@/context/AppContext";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Alert, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
-import { checkUpdateRequired } from "@/utils/version";
+import { checkUpdateAvailable } from "@/utils/version";
 import { hasPassword, isDeviceTrusted } from "@/utils/auth2fa";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Index() {
   const { isLoading, termsAccepted, paymentDone, user } = useApp();
   const colors = useColors();
   const [guard, setGuard] = useState<string | null>(null);
+  const updateAlertShown = useRef(false);
 
   useEffect(() => {
-    runGuards();
-  }, [user]);
+    void runGuards();
+  }, [user, isLoading]);
 
   const runGuards = async () => {
     if (!user || isLoading) return;
-    // 1) Contrôle de version : une version plus récente publiée bloque l'app.
-    const { required, apkUrl } = await checkUpdateRequired();
-    if (required) {
-      setGuard(apkUrl ? `update&apk=${encodeURIComponent(apkUrl)}` : "update");
-      return;
+
+    try {
+      // Contrôle informatif uniquement : aucune ancienne APK n'est bloquée.
+      const update = await checkUpdateAvailable();
+      if (update.available && !updateAlertShown.current) {
+        updateAlertShown.current = true;
+        Alert.alert(
+          "Nouvelle mise à jour disponible",
+          `La version ${update.latestVersion} de Hawtrix est disponible. Tu peux continuer à utiliser cette version et effectuer la mise à jour plus tard depuis le canal officiel.`,
+          [{ text: "Compris", style: "default" }],
+        );
+      }
+
+      // Double facteur : mot de passe défini sur un appareil non reconnu.
+      const hasPw = await hasPassword();
+      if (hasPw && !(await isDeviceTrusted())) {
+        setGuard("unlock");
+        return;
+      }
+    } catch {
+      // Le contrôle de version et le contrôle 2FA sont non bloquants.
     }
-    // 2) Double facteur : mot de passe défini sur un appareil non reconnu.
-    const hasPw = await hasPassword();
-    if (hasPw && !(await isDeviceTrusted())) {
-      setGuard("unlock");
-      return;
-    }
+
     setGuard(null);
   };
 
@@ -40,20 +52,12 @@ export default function Index() {
     );
   }
 
-  // Garde de version / 2FA prioritaire sur les autres redirections.
-  if (guard) {
-    if (guard.startsWith("update&apk=")) {
-      return <Redirect href={{ pathname: "/update", params: { apkUrl: decodeURIComponent(guard.slice(11)) } } as any} />;
-    }
-    return <Redirect href={`/${guard}` as any} />;
-  }
+  if (guard) return <Redirect href={`/${guard}` as any} />;
 
   if (!termsAccepted) return <Redirect href="/welcome" />;
   if (!paymentDone) return <Redirect href="/payment" />;
   if (!user) return <Redirect href="/welcome" />;
-  if (user.isBanned) {
-    return <Redirect href="/welcome" />; // Or a specific blocked screen
-  }
+  if (user.isBanned) return <Redirect href="/welcome" />;
   if (!user.tutorialSeen) return <Redirect href="/tutorial" />;
   return <Redirect href="/(tabs)/home" />;
 }
