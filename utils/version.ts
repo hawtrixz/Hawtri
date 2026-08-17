@@ -1,25 +1,15 @@
 // utils/version.ts
 //
-// Hawtrix 2.89.3 — contrôle de version & mise à jour forcée de l'APK
-// ---------------------------------------------------------------
-// - À chaque lancement, l'app interroge https://hawtrix.tg/version.json
-//   qui retourne { minVersion: "2.89.3", apkUrl: "https://hawtrix.tg/hawtrix.apk" }.
-// - Si la version installée est inférieure à minVersion, l'app est
-//   bloquée et redirigée vers /update pour télécharger la nouvelle APK
-//   directement depuis l'application. Les anciennes APK cessent ainsi
-//   de fonctionner dès qu'une version plus récente est publiée.
-// - En cas d'échec réseau, l'utilisateur peut continuer (pas de blocage
-//   injustifié), mais une notification l'invite à mettre à jour.
-//
-// Déploiement: le fichier version.json et l'APK doivent être déposés sur
-// le serveur https://hawtrix.tg (le workflow GitHub Actions .github/
-// workflows/build-apk.yml peut être étendu pour le faire automatiquement).
+// Contrôle informatif des versions Hawtrix.
+// L'application ne bloque jamais une ancienne version et ne télécharge
+// jamais une APK directement depuis l'application.
+
 import Constants from "expo-constants";
 import { isOnline } from "@/utils/network";
 
 export interface VersionInfo {
-  minVersion: string;
-  apkUrl: string;
+  latestVersion: string;
+  notes?: string;
 }
 
 const VERSION_JSON_URL = "https://hawtrix.tg/version.json";
@@ -45,20 +35,30 @@ export async function fetchVersionInfo(): Promise<VersionInfo | null> {
     if (!(await isOnline())) return null;
     const res = await fetch(`${VERSION_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return null;
-    const data = (await res.json()) as VersionInfo;
-    if (!data.minVersion || !data.apkUrl) return null;
-    return data;
+    const data = (await res.json()) as Partial<VersionInfo> & { minVersion?: string };
+    const latestVersion = data.latestVersion ?? data.minVersion;
+    if (!latestVersion) return null;
+    return { latestVersion, notes: data.notes };
   } catch {
     return null;
   }
 }
 
-export async function checkUpdateRequired(): Promise<{ required: boolean; apkUrl?: string }> {
+export async function checkUpdateAvailable(): Promise<{ available: boolean; latestVersion?: string; notes?: string }> {
   const info = await fetchVersionInfo();
-  if (!info) return { required: false };
-  const installed = getAppVersion();
+  if (!info) return { available: false };
   return {
-    required: compareVersions(installed, info.minVersion) < 0,
-    apkUrl: info.apkUrl,
+    available: compareVersions(getAppVersion(), info.latestVersion) < 0,
+    latestVersion: info.latestVersion,
+    notes: info.notes,
   };
 }
+
+// Compatibilité avec d'anciens appels éventuels : aucune ancienne APK ne sera bloquée.
+export async function checkUpdateRequired(): Promise<{ required: false }> {
+  return { required: false };
+}
+
+export const VERSION_JSON_URL_PUBLIC = VERSION_JSON_URL;
+export const APP_UPDATE_POLICY = "inform-only" as const;
+export const DIRECT_APK_DOWNLOAD_DISABLED = true as const;
