@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -17,10 +18,28 @@ function timeAgo(iso: string): string {
 }
 
 export default function MessagesScreen() {
-  const { conversations, user } = useApp();
+  const { conversations, user, refreshConversations } = useApp();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const totalUnread = conversations.reduce((acc, c) => acc + c.unread, 0);
+
+  // Rafraîchir la liste des conversations depuis le serveur au chargement
+  // puis toutes les 5 secondes afin de voir les nouveaux messages et non-lus.
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      while (active) {
+        try {
+          await refreshConversations();
+        } catch {
+          // Le serveur est temporairement injoignable : on retentera au prochain cycle.
+        }
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    };
+    poll();
+    return () => { active = false; };
+  }, [refreshConversations]);
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
@@ -44,32 +63,27 @@ export default function MessagesScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={56} color="#D1D5DB" />
+            <Ionicons name="chatbubbles-outline" size={48} color="#9CA3AF" />
             <Text style={styles.emptyTitle}>Aucune conversation</Text>
-            <Text style={styles.emptySub}>Contactez un prestataire depuis l'annuaire pour commencer à discuter</Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push("/(tabs)/explore")} activeOpacity={0.8}>
-              <Text style={styles.emptyBtnText}>Trouver un prestataire</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptySub}>Explorez le réseau et démarrez votre première conversation</Text>
           </View>
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.convCard}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: "/messages/[id]", params: { id: item.id, name: item.participantName } }); }}
-            activeOpacity={0.8}
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: "/messages/[id]", params: { id: item.id, name: item.participantName } })}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.participantName[0]}</Text>
+              <Text style={styles.avatarText}>{(item.participantName || "?")[0]}</Text>
             </View>
-            <View style={styles.convBody}>
-              <View style={styles.convTop}>
-                <Text style={styles.convName}>{item.participantName}</Text>
-                <Text style={styles.convTime}>{timeAgo(item.lastTimestamp)}</Text>
-              </View>
-              <View style={styles.convBottom}>
-                <Text style={styles.convLast} numberOfLines={1}>{item.lastMessage || "Nouvelle conversation"}</Text>
-                {item.unread > 0 && <View style={styles.unreadBadge}><Text style={styles.unreadText}>{item.unread}</Text></View>}
-              </View>
+            <View style={styles.body}>
+              <Text style={styles.name} numberOfLines={1}>{item.participantName}</Text>
+              <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage || "Nouveau message"}</Text>
+            </View>
+            <View style={styles.meta}>
+              <Text style={styles.time}>{timeAgo(item.lastTimestamp)}</Text>
+              {item.unread > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{item.unread > 99 ? "99+" : item.unread}</Text></View>}
             </View>
           </TouchableOpacity>
         )}
@@ -80,25 +94,22 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F6FA" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 16 },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  headerSub: { fontSize: 12, color: "#94A3B8", fontFamily: "Inter_400Regular" },
+  headerSub: { fontSize: 12, color: "#10B981", fontFamily: "Inter_400Regular" },
   composeBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  convCard: { flexDirection: "row", backgroundColor: "#FFFFFF", paddingHorizontal: 16, paddingVertical: 14, gap: 12, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#F5F6FA" },
-  avatar: { width: 52, height: 52, borderRadius: 16, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 22, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  convBody: { flex: 1, gap: 4 },
-  convTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  convName: { fontSize: 15, fontWeight: "700", color: "#0A1628", fontFamily: "Inter_700Bold" },
-  convTime: { fontSize: 12, color: "#9CA3AF", fontFamily: "Inter_400Regular" },
-  convBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  convLast: { flex: 1, fontSize: 13, color: "#6B7280", fontFamily: "Inter_400Regular" },
-  unreadBadge: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center" },
-  unreadText: { fontSize: 11, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
-  empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 40, gap: 10 },
-  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#0A1628", fontFamily: "Inter_700Bold" },
-  emptySub: { fontSize: 14, color: "#9CA3AF", fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
-  emptyBtn: { backgroundColor: "#FF6B00", borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, marginTop: 8 },
-  emptyBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+  row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#FFFFFF", marginHorizontal: 12, marginVertical: 4, borderRadius: 16, gap: 12 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 20, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+  body: { flex: 1 },
+  name: { fontSize: 15, fontWeight: "700", color: "#0A1628", fontFamily: "Inter_700Bold" },
+  lastMessage: { fontSize: 13, color: "#6B7280", fontFamily: "Inter_400Regular", marginTop: 2 },
+  meta: { alignItems: "flex-end", gap: 6 },
+  time: { fontSize: 11, color: "#9CA3AF", fontFamily: "Inter_400Regular" },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: "#FF6B00", alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  badgeText: { fontSize: 11, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+  empty: { paddingTop: 80, alignItems: "center", gap: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#374151", fontFamily: "Inter_700Bold" },
+  emptySub: { fontSize: 13, color: "#9CA3AF", fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 40 },
 });
