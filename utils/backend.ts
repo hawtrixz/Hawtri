@@ -353,3 +353,4 @@ export const backend = {
     await setToken(null);
   },
 };
+
