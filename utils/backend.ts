@@ -11,7 +11,7 @@
 //       EXPO_PUBLIC_API_URL=https://votre-url-backend.onrender.com
 //   - OU définissez la variable dans EAS Build
 //
-// URL de production officielle du backend Render. La variable d’environnement
+// URL de production officielle du backend Render. La variable d'environnement
 // reste prioritaire pour les environnements de test ou les déploiements futurs.
 //
 // Utilisation : import { backend } from "@/utils/backend";
@@ -29,8 +29,8 @@ const BASE_URL = (
   process.env.EXPO_PUBLIC_API_URL || "https://hawtrix-server.onrender.com"
 ).replace(/\/+$/, "");
 
-// BASE_URL possède un fallback de production afin que l’APK EAS fonctionne
-// même si aucune variable publique n’est injectée dans l’environnement de build.
+// BASE_URL possède un fallback de production afin que l'APK EAS fonctionne
+// même si aucune variable publique n'est injectée dans l'environnement de build.
 
 /** Lit le jeton JWT stocké localement */
 export function getToken(): string | null {
@@ -112,6 +112,7 @@ export interface ServerUser {
   inviteLimit: number | null;
   isBanned: boolean;
   isSuspended: boolean;
+  paymentDone: boolean;
   tutorialSeen: boolean;
   joinedAt: string;
 }
@@ -369,5 +370,3 @@ export const backend = {
     await setToken(null);
   },
 };
-
-
