@@ -318,6 +318,22 @@ export const backend = {
     return res.users;
   },
 
+  /* =================== Inscriptions en attente =================== */
+  async adminGetPendingRegistrations() {
+    const res = await request<{ success: boolean; registrations: any[] }>("GET", "/admin/registrations");
+    return res.registrations.map((r: any) => ({
+      id: r.id,
+      name: r.name || "",
+      surname: r.surname || "",
+      phone: r.phone || "",
+      referrerId: r.referrer_id ?? r.referrerId ?? null,
+      status: r.status,
+      createdAt: r.created_at ?? r.createdAt,
+    }));
+  },
+  async adminSetRegistrationStatus(id: string, status: "active" | "rejected") {
+    return request<{ success: boolean; message: string }>("PATCH", `/admin/registrations/${id}`, { status });
+  },
   async adminGetWithdrawals(): Promise<AdminWithdrawal[]> {
     const res = await request<{ success: boolean; withdrawals: any[] }>("GET", "/admin/withdrawals");
     return res.withdrawals.map((w: any) => ({
@@ -353,4 +369,5 @@ export const backend = {
     await setToken(null);
   },
 };
+
 
