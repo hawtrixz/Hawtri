@@ -327,7 +327,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(remoteUser);
     await AsyncStorage.setItem("hawtrix_user", JSON.stringify(remoteUser));
     await setTermsAccepted(true);
-    await setPaymentDone(true);
+    // Une inscription ne valide pas le paiement : la page d'activation doit rester obligatoire.
+    await setPaymentDone(false);
     return;
   }, [setPaymentDone, setTermsAccepted]);
 
@@ -389,8 +390,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(remoteUser);
     await AsyncStorage.setItem("hawtrix_user", JSON.stringify(remoteUser));
     await setTermsAccepted(true);
-    await setPaymentDone(true);
-  }, [setPaymentDone, setTermsAccepted]);
+    // Ne pas écraser l'état local d'activation lors d'une connexion.
+    // Les comptes déjà activés conservent leur état hawtrix_payment.
+  }, [setTermsAccepted]);
 
   const updateUser = useCallback(async (data: Partial<User>) => {
     if (!user) throw new Error("Utilisateur non connecté");
@@ -607,4 +609,4 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useApp must be used within AppProvider");
   return ctx;
-}
+  }
