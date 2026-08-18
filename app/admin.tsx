@@ -1,3 +1,21 @@
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View, FlatList, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useApp, AdminUserView } from "@/context/AppContext";
+import { backend, AdminWithdrawal } from "@/utils/backend";
+import { Ionicons } from "@expo/vector-icons";
+
+type PendingRegistration = {
+  id: string;
+  name: string;
+  surname: string;
+  phone: string;
+  referrerId: string | null;
+  status: string;
+  createdAt: string;
+};
 
 export default function AdminScreen() {
   const { user, refreshProfile, getAllUsers, banUser, suspendUser } = useApp();
