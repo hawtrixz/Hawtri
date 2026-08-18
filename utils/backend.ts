@@ -144,6 +144,17 @@ export interface ServerNotification {
   created_at?: string;
 }
 
+export interface AdminWithdrawal {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhone: string;
+  amount: number;
+  status: "pending" | "completed" | "rejected";
+  code: string;
+  createdAt: string;
+}
+
 /* =================== Auth =================== */
 
 export const backend = {
@@ -183,6 +194,11 @@ export const backend = {
   async updateProfile(data: Partial<ServerUser>): Promise<ServerUser> {
     const res = await request<{ success: boolean; user: ServerUser }>("PUT", "/auth/me", data);
     return res.user;
+  },
+
+  /** Enregistre le jeton Expo pour les notifications Android. */
+  async registerPushToken(pushToken: string): Promise<void> {
+    await request("PUT", "/auth/push-token", { pushToken });
   },
 
   /* =================== Chat =================== */
@@ -302,6 +318,24 @@ export const backend = {
     return res.users;
   },
 
+  async adminGetWithdrawals(): Promise<AdminWithdrawal[]> {
+    const res = await request<{ success: boolean; withdrawals: any[] }>("GET", "/admin/withdrawals");
+    return res.withdrawals.map((w: any) => ({
+      id: w.id,
+      userId: w.user_id ?? w.userId,
+      userName: w.user_name ?? w.userName ?? "Utilisateur",
+      userPhone: w.user_phone ?? w.userPhone ?? "",
+      amount: Number(w.amount || 0),
+      status: w.status,
+      code: w.code || "",
+      createdAt: w.created_at ?? w.createdAt,
+    }));
+  },
+
+  async adminUpdateWithdrawal(id: string, status: "completed" | "rejected") {
+    return request<{ success: boolean; message: string }>("PATCH", `/admin/withdrawals/${id}`, { status });
+  },
+
   async adminBanUser(userId: string, banned: boolean) {
     return request("PATCH", `/admin/users/${userId}/ban`, { banned });
   },
@@ -319,4 +353,3 @@ export const backend = {
     await setToken(null);
   },
 };
-
