@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { backend } from "@/utils/backend";
+import { registerPushToken } from "@/utils/pushNotifications";
 
 export type Grade =
   | "membre"
@@ -228,6 +229,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void registerPushToken();
+  }, [user?.id]);
 
   const loadData = async () => {
     try {
