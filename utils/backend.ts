@@ -399,8 +399,12 @@ export const backend = {
     return request("POST", "/admin/notifications", { title, body, type });
   },
 
+  /** Conversation avec l'IA Hawtrix (réponse intelligente, pas simulée) */
+  async aiChat(message: string, history: { role: "user" | "assistant"; text: string }[] = []) {
+    return request<{ success: boolean; reply: string }>("POST", "/ai/chat", { message, history });
+  },
   /** Déconnexion locale */
   async logout() {
     await setToken(null);
   },
-};
+
