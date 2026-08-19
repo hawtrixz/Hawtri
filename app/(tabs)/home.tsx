@@ -1,6 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useEffect, useState } from "react";
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp, GRADE_INFO } from "@/context/AppContext";
@@ -36,12 +37,48 @@ const SAMPLE_TRAININGS = TRAININGS.slice(0, 3);
 
 const TRAIN_TYPE_COLOR: Record<string, string> = { "Bourse": "#8B5CF6", "Concours": "#EF4444", "Stage": "#FF6B00", "Emploi": "#10B981", "Financement": "#059669", "Événement": "#7C3AED" };
 
+/**
+ * Normalise une chaîne pour la recherche : minuscules + accents enlevés.
+ * "etudiant" retrouve "Étudiant".
+ */
+function stripAccents(text: string): string {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 export default function HomeScreen() {
-  const { user, notifications } = useApp();
+  const { user, notifications, conversations, refreshConversations } = useApp();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const unread = notifications.filter(n => !n.read).length;
   const gradeInfo = user ? GRADE_INFO[user.grade] : null;
+
+  // Badge Messages : total des messages non lus de toutes les conversations,
+  // rafraîchi au montage puis toutes les 10 secondes.
+  const [msgUnread, setMsgUnread] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const update = () => {
+      const total = conversations.reduce((acc, c) => acc + Number(c.unread || 0), 0);
+      setMsgUnread(total);
+    };
+    update();
+    if (refreshConversations) {
+      refreshConversations().catch(() => {});
+      const interval = setInterval(() => {
+        refreshConversations().then(update).catch(() => {});
+      }, 10000);
+      return () => { active = false; clearInterval(interval); };
+    }
+    return () => { active = false; };
+  }, [conversations, refreshConversations]);
+
+  const openSearch = (text: string) => {
+    const q = text ? `?q=${encodeURIComponent(text)}` : "";
+    router.push(`/(tabs)/explore${q}` as any);
+  };
 
   return (
     <View style={styles.container}>
@@ -77,9 +114,10 @@ export default function HomeScreen() {
             style={styles.searchInput}
             placeholder="Rechercher un prestataire, service..."
             placeholderTextColor="#9CA3AF"
-            onFocus={() => router.push("/(tabs)/explore")}
+            returnKeyType="search"
+            onSubmitEditing={e => openSearch(e.nativeEvent.text)}
           />
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7} onPress={() => router.push("/(tabs)/explore")}>
             <Ionicons name="options" size={18} color="#FF6B00" />
           </TouchableOpacity>
         </View>
@@ -87,21 +125,29 @@ export default function HomeScreen() {
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.quickActionsGrid}>
-          {QUICK_ACTIONS.map(a => (
-            <TouchableOpacity
-              key={a.label}
-              style={styles.quickCard}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(a.route as any); }}
-              activeOpacity={0.8}
-            >
-              <LinearGradient colors={[a.color + "20", a.color + "10"]} style={styles.quickGrad}>
-                <View style={[styles.quickIcon, { backgroundColor: a.color }]}>
-                  <Ionicons name={a.icon as any} size={22} color="#FFFFFF" />
-                </View>
-                <Text style={styles.quickLabel}>{a.label}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
+          {QUICK_ACTIONS.map(a => {
+            const isMessages = a.label === "Messages";
+            return (
+              <TouchableOpacity
+                key={a.label}
+                style={styles.quickCard}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(a.route as any); }}
+                activeOpacity={0.8}
+              >
+                <LinearGradient colors={[a.color + "20", a.color + "10"]} style={styles.quickGrad}>
+                  <View style={[styles.quickIcon, { backgroundColor: a.color }]}>
+                    <Ionicons name={a.icon as any} size={22} color="#FFFFFF" />
+                    {isMessages && msgUnread > 0 ? (
+                      <View style={styles.msgBadge}>
+                        <Text style={styles.msgBadgeText}>{msgUnread > 99 ? "99+" : msgUnread}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.quickLabel}>{a.label}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.section}>
@@ -198,8 +244,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   quickActionsGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12, gap: 8 },
   quickCard: { width: "30.5%", borderRadius: 16, overflow: "hidden" },
-  quickGrad: { padding: 14, alignItems: "center", gap: 8 },
+  quickGrad: { padding: 14, alignItems: "center", gap: 8, position: "relative" },
   quickIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  msgBadge: { position: "absolute", top: -4, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: "#FF6B00", borderWidth: 2, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
+  msgBadgeText: { fontSize: 9, fontWeight: "700", color: "#FFFFFF", fontFamily: "Inter_700Bold", lineHeight: 12 },
   quickLabel: { fontSize: 11, fontWeight: "600", color: "#374151", fontFamily: "Inter_600SemiBold", textAlign: "center" },
   section: { paddingHorizontal: 16, marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
