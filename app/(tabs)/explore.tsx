@@ -10,6 +10,19 @@ import { backend } from "@/utils/backend";
 
 const FILTERS = ["Tous", "Disponibles", "Électricité", "Informatique", "Couture", "Coiffure", "Plomberie", "Mécanique"];
 
+/**
+ * Normalise une chaîne pour la recherche :
+ * - met tout en minuscules
+ * - enlève les accents (é → e, ô → o, ù → u, etc.)
+ * Ainsi "etudiant" trouve "Étudiant", "tegù" trouve "Tégu".
+ */
+function stripAccents(text: string): string {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 export default function ExploreScreen() {
   const { user: currentUser } = useApp();
   const params = useLocalSearchParams<{ category?: string }>();
@@ -57,9 +70,16 @@ export default function ExploreScreen() {
     };
   }, [search, currentUser?.id, reloadKey]);
 
+  // Recherche sans accents : les deux textes sont normalisés avant comparaison.
+  const searchNorm = stripAccents(search);
   const filtered = allProviders.filter(p => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.profession.toLowerCase().includes(search.toLowerCase()) || p.neighborhood.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = activeFilter === "Tous" ? true : activeFilter === "Disponibles" ? p.available : p.profession.toLowerCase().includes(activeFilter.toLowerCase());
+    const matchSearch = !search ||
+      stripAccents(p.name).includes(searchNorm) ||
+      stripAccents(p.profession).includes(searchNorm) ||
+      stripAccents(p.neighborhood).includes(searchNorm);
+    const matchFilter = activeFilter === "Tous" ? true :
+      activeFilter === "Disponibles" ? p.available :
+      stripAccents(p.profession).includes(stripAccents(activeFilter));
     return matchSearch && matchFilter;
   });
 
