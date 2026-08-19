@@ -145,6 +145,17 @@ export interface ServerNotification {
   created_at?: string;
 }
 
+
+export interface ServerReview {
+  id: string;
+  reviewerId: string;
+  name: string;
+  surname: string;
+  rating: number;
+  text: string;
+  timestamp: string;
+}
+
 export interface AdminWithdrawal {
   id: string;
   userId: string;
@@ -254,6 +265,29 @@ export const backend = {
       "POST", `/chat/conversations/${conversationId}`, { text },
     );
     return res.message;
+  },
+
+  /* =================== Avis =================== */
+
+  async getReviews(reviewedId: string): Promise<ServerReview[]> {
+    const res = await request<{ success: boolean; reviews: any[] }>(
+      "GET", `/chat/reviews/${reviewedId}`,
+    );
+    return (res.reviews ?? []).map((r) => ({
+      id: r.id,
+      reviewerId: r.reviewer_id ?? r.reviewerId,
+      name: r.name ?? "",
+      surname: r.surname ?? "",
+      rating: Number(r.rating),
+      text: r.text ?? "",
+      timestamp: r.created_at ?? r.timestamp,
+    }));
+  },
+
+  async setReview(reviewedId: string, rating: number, text: string) {
+    return request<{ success: boolean; message: string }>(
+      "POST", "/chat/reviews", { reviewedId, rating, text },
+    );
   },
 
   /* =================== Notifications =================== */
