@@ -470,8 +470,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return conversation.id;
   }, [conversations]);
 
-  const markConversationRead = useCallback(async (id: string) => {
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
+    const markConversationRead = useCallback(async (id: string) => {
+    const serverMessages = await backend.getMessages(id);
+    const messages: Message[] = serverMessages.map(m => ({
+      id: String(m.id),
+      senderId: m.senderId,
+      text: m.text,
+      timestamp: m.timestamp,
+      read: true,
+    }));
+    setConversations((prev) => prev.map((c) =>
+      c.id === id ? {
+        ...c,
+        unread: 0,
+        messages,
+        lastMessage: messages.length > 0 ? messages[messages.length - 1].text : c.lastMessage,
+        lastTimestamp: messages.length > 0 ? messages[messages.length - 1].timestamp : c.lastTimestamp,
+      } : c
+    ));
   }, []);
 
   const logout = useCallback(async () => {
