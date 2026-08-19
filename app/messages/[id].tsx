@@ -4,7 +4,8 @@ import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useApp } from "@/context/AppContext";
+import { useApp, type Message } from "@/context/AppContext";
+import { backend } from "@/utils/backend";
 import { Ionicons } from "@expo/vector-icons";
 
 function timeStr(iso: string): string {
@@ -14,29 +15,42 @@ function timeStr(iso: string): string {
 export default function ChatScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name: string }>();
   const { user, conversations, sendMessage, markConversationRead } = useApp();
+  // Messages affichés dans la conversation : chargés directement depuis le serveur.
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const listRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const conv = conversations.find(c => c.id === id);
-  const messages = conv?.messages ?? [];
-
-  // Rafraîchir les messages reçus depuis le serveur toutes les 3 secondes et
-  // marquer la conversation comme lue, y compris après chaque envoi.
+  // Charger l'historique complet des messages depuis le serveur à l'ouverture
+  // de la conversation, puis recharger toutes les 3 secondes (polling).
   useEffect(() => {
     let active = true;
+    const load = async () => {
+      try {
+        const serverMessages = await backend.getMessages(id ?? "");
+        if (!active) return;
+        setMessages(serverMessages.map(m => ({
+          id: String(m.id),
+          senderId: m.senderId,
+          text: m.text,
+          timestamp: m.timestamp,
+          read: Boolean(m.read),
+        })));
+        await markConversationRead(id ?? "");
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
+      } catch {
+        // Le serveur est temporairement injoignable : on retentera au prochain cycle.
+      }
+    };
     const poll = async () => {
       while (active) {
-        try {
-          await markConversationRead(id ?? "");
-        } catch {
-          // Le serveur est temporairement injoignable : on retentera au prochain cycle.
-        }
+        await load();
         await new Promise(r => setTimeout(r, 3000));
       }
     };
+    load();
     poll();
     return () => { active = false; };
   }, [id, markConversationRead]);
@@ -44,11 +58,24 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!input.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(id ?? "", input.trim());
+    const text = input.trim();
     setInput("");
+    try {
+      await sendMessage(id ?? "", text);
+    } catch {
+      // Ignorer : le polling rechargera les messages au prochain cycle.
+    }
     // Recharger immédiatement les messages du serveur après l'envoi.
     try {
       await markConversationRead(id ?? "");
+      const serverMessages = await backend.getMessages(id ?? "");
+      setMessages(serverMessages.map(m => ({
+        id: String(m.id),
+        senderId: m.senderId,
+        text: m.text,
+        timestamp: m.timestamp,
+        read: Boolean(m.read),
+      })));
     } catch {
       // Ignorer : le polling reprendra au prochain cycle.
     }
