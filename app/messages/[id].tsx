@@ -24,7 +24,7 @@ export default function ChatScreen() {
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   // Charger l'historique complet des messages depuis le serveur à l'ouverture
-  // de la conversation, puis recharger toutes les 3 secondes (polling).
+  // de la conversation, puis recharger toutes les 3 secondes (réception en temps réel).
   useEffect(() => {
     let active = true;
     const load = async () => {
