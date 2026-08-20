@@ -407,4 +407,5 @@ export const backend = {
   async logout() {
     await setToken(null);
   },
+  };
 
